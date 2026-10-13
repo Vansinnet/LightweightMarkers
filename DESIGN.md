@@ -1,5 +1,5 @@
 # LightweightStrategicalMarkers: design
-Status 2026-10-13: 0.99.0 released on GitHub, ModID `LightweightStrategicalMarkers`. Verified: static and offline (`tests/`); independent source review 2026-10-13; all features confirmed in game by the user 2026-10-13.
+Status 2026-10-13: 0.99.0 released on GitHub, ModID `LightweightStrategicalMarkers`. Verified: static and offline (`tests/`); independent source review 2026-10-13; all features confirmed in game by the user 2026-10-13. Unreleased since: item colours (runtime-pending).
 
 Lightweight markers for ammo, grenade refills, medical crates, stimms, health stations and chests, built as a lean alternative to Markers Improved AIO (`referensmoddar/markers_aio`).
 
@@ -20,6 +20,7 @@ Lightweight markers for ammo, grenade refills, medical crates, stimms, health st
 - 2026-10-13 (user): a marker distance setting so players can see further: 40 m default, 10-200 m.
 - 2026-10-13 (user): plasteel, diamantine, grimoires, scriptures and heretical idols as options, off by default, as light as possible.
 - 2026-10-13 (user): "Show distance" off by default.
+- 2026-10-13 (user): stimms get Markers Improved AIO's default colours (medical green, power red, speed blue, concentration yellow), health stations the medical stimm's green, plasteel and diamantine light blue. Vanilla's interaction marker for those items gets the same colour, so an item keeps one colour at every distance and with any setting. Done by recolouring vanilla's icon, not by hiding its marker (that keeps tags and the interaction prompt).
 - 2026-10-13 (user, answered): chest contents cannot be shown online. Reserved items are decided on the server at mission start and never sent; the rest is rolled on opening from the team's needs (`pickup_system.lua`, `_populate_pickups`, `get_rubberband_pickup`). Only possible when the local machine is the server (Psykanium, SoloPlay); not built.
 - 2026-10-13: not marked: luggables, expedition-only pickups except the large ammo crate, live-event items (including the nurgle totem Markers AIO lists under idols). The ignore list in `tests/test_categories.lua` names each pickup.
 
@@ -42,6 +43,7 @@ Lightweight markers for ammo, grenade refills, medical crates, stimms, health st
 - Passes: background, ring and icon with vanilla's textures, colours and hand-over sizes (`marker_template.lua`, FRAMES), a distance label and a charge count. One widget definition is cached and shared (`UIWidget.init` clones content, style and passes, `scripts/managers/ui/ui_widget.lua:14-33`).
 - `on_enter` writes per-marker settings into the marker's own deep-copied template (`table.clone`, `scripts/foundation/utilities/table.lua:38-52`): position offset (0.8 m for pickups like vanilla's "pickup" visuals, 0 for chests and stations), max distance, line-of-sight check and edge fade (`easing_function` is required, `_get_fade` calls it unguarded).
 - `update_function` runs every frame for each live marker after `draw` is decided (`hud_element_world_markers.lua:461-474`, call at `:470`). It allocates nothing and reads no settings. Alpha = line of sight x empty-station dim x (1 - vanilla's alpha); at about zero it sets `draw = false` so the widget is not drawn. Distance text comes from a prebuilt table and changes only when the whole metre does.
+- Vanilla recolour: a `hook_safe` on the interaction template's `update_function` (`world_marker_template_interaction.lua:673-799`) writes the kind's colour into its icon when the unit is tracked and the kind has its own colour (`recolor`). Vanilla sets that colour only in `setup_marker_by_interaction_type` (`:480-518`, on a visual-type change such as tagging), so the hook runs after it every frame. Each marker clones the template when added (`hud_element_world_markers.lua`, `_template_by_type`), so clones carry the hooked function. Items of a group that is off are not tracked and keep vanilla's colour.
 - Vanilla yield: vanilla's marker for the unit is found through `HudElementInteraction._interaction_units[unit].marker_id` (`scripts/ui/hud/elements/interaction/hud_element_interaction.lua:64-106`) and `_markers_by_id`; its alpha is its line-of-sight alpha times its distance fade unless tagged. While it is fully shown, ours is hidden and its line-of-sight check is off, so it takes no raycasts.
 - Raycasts: the HUD runs 10 every 5th frame for all markers, longest-waiting first (`hud_element_world_markers_settings.lua`, `hud_element_world_markers.lua:11-23,441-447`). Our markers' wait ages at half speed so vanilla markers keep priority.
 - `on_exit` releases the widget name in the element that created it (vanilla keeps every marker widget name for the element's lifetime).
@@ -66,6 +68,7 @@ Lightweight markers for ammo, grenade refills, medical crates, stimms, health st
 | World-marker events, template fields, update order, removal | `scripts/ui/hud/elements/world_markers/hud_element_world_markers.lua:27-75,106-135,168-226,246-490,492-577,795-799` |
 | Raycast budget | `scripts/ui/hud/elements/world_markers/hud_element_world_markers_settings.lua` |
 | Vanilla interaction marker (15 m, fade, offsets, LOS alpha) | `scripts/ui/hud/elements/world_markers/templates/world_marker_template_interaction.lua` |
+| Vanilla icon colour set on visual-type change; update order | `world_marker_template_interaction.lua:480-518,673-799` |
 | `HudElementInteraction._interaction_units` | `scripts/ui/hud/elements/interaction/hud_element_interaction.lua:14,64-106,108-120` |
 | `UIHud:element`, visible elements | `scripts/managers/ui/ui_hud.lua:20,271,387` |
 | `HudElementBase` `_parent`, `has_widget`, `_unregister_widget_name` | `scripts/ui/hud/elements/hud_element_base.lua:13,56-64` |
@@ -76,8 +79,8 @@ Lightweight markers for ammo, grenade refills, medical crates, stimms, health st
 
 ## Tests
 - `tools/luajit/luajit mods/active/LightweightStrategicalMarkers/tests/test_categories.lua` -> 2026-10-13: 61 pickups, 17 marked, 44 ignored, 3 interaction types, 0 failures.
-- `tools/luajit/luajit mods/active/LightweightStrategicalMarkers/tests/test_runtime.lua` -> 2026-10-13: 13676 checks, 0 failures (3 runs, identical).
-- `bash tools/validate.sh mods/active/LightweightStrategicalMarkers` -> 2026-10-13: LuaLS 0 diagnostics, LuaJIT parse passed. `tools\validate.ps1` not run.
+- `tools/luajit/luajit mods/active/LightweightStrategicalMarkers/tests/test_runtime.lua` -> 2026-10-13: 13682 checks, 0 failures.
+- `tools\validate.ps1 mods\active\LightweightStrategicalMarkers` -> 2026-10-13: LuaLS 0 diagnostics, LuaJIT load passed.
 
 ## Runtime status
 Smallest in-game test:
@@ -90,6 +93,7 @@ Smallest in-game test:
 7. Ctrl+Shift+R mid-mission. Expected: markers come back, no errors in the console log.
 
 8. Options: turn on plasteel, diamantine, grimoires, scriptures and heretical idols. Expected: those items get markers; a destroyed idol loses its marker.
+9. Colours: stimms are green, red, blue or yellow, health stations green, plasteel and diamantine light blue, both far away and within 15 m (vanilla's marker), also when tagged.
 
 Confirmed in game 2026-10-13 (user): everything tested works, including the 15 m hand-over and the material and collectible options.
 

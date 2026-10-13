@@ -24,7 +24,9 @@ It is built to cost as little as possible:
 | Grimoires and scriptures (off by default) | The game's side-mission item icon | |
 | Heretical idols (off by default) | The game's priority-target icon | Only the idols the mission actually uses; removed once destroyed |
 
-Within about 15 m the game shows its own marker for the same item. This mod's marker then fades out, so there is never a double icon, and tags and the interaction prompt look as usual. Markers use the game's colour, frame and size at that distance, so the hand-over is not visible. Like the game's own markers, small and large amounts of the same item look alike.
+Stimms are coloured by type (medical green, power red, speed blue, concentration yellow), health stations green like the medical stimm, and plasteel and diamantine light blue. Everything else uses the game's colour.
+
+Within about 15 m the game shows its own marker for the same item. This mod's marker then fades out, so there is never a double icon, and tags and the interaction prompt look as usual. Markers use the game's frame and size at that distance, and the game's marker gets the same colour, so the hand-over is not visible and an item keeps its colour at every distance. Like the game's own markers, small and large amounts of the same item look alike.
 
 ## Settings
 
