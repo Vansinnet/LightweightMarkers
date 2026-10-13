@@ -51,8 +51,7 @@ return {
                 sub_widgets = {
                     checkbox("show_plasteel", false),
                     checkbox("show_diamantine", false),
-                    checkbox("show_containers", false),
-                    checkbox("show_power_cells", false),
+                    checkbox("show_carry_items", false),
                     checkbox("show_grimoires", false),
                     checkbox("show_scriptures", false),
                     checkbox("show_heretical_idols", false),

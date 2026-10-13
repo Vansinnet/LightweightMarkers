@@ -325,8 +325,7 @@ local settings = {
     show_grimoires = false,
     show_scriptures = false,
     show_heretical_idols = false,
-    show_containers = false,
-    show_power_cells = false,
+    show_carry_items = false,
 }
 
 local hooks = {}
@@ -742,7 +741,7 @@ ALIVE[new_idol] = nil
 destructible_map[new_idol] = nil
 frames(2)
 
--- Mission containers: off by default, hidden while carried, thrown or socketed, back when dropped.
+-- Power cells and containers: off by default, hidden while carried, thrown or socketed, back when dropped.
 local container_state = { state = "sleep" }
 local container = spawn(14, "luggable", { pickup_type = "container_02_luggable" }, {
     locomotion_system = { current_state = function()
@@ -752,7 +751,7 @@ local container = spawn(14, "luggable", { pickup_type = "container_02_luggable" 
 
 frames(2)
 check(element:marker_for(container) == nil, "containers off by default")
-set_setting("show_containers", true)
+set_setting("show_carry_items", true)
 frames(2)
 check(element:marker_for(container) ~= nil, "container shown once turned on")
 container_state.state = "carried"
@@ -767,11 +766,11 @@ check(element:marker_for(container) == nil, "delivered container has no marker")
 container_state.state = nil
 frames(2)
 check(element:marker_for(container) == nil, "container without a synced state has no marker")
-set_setting("show_containers", false)
+set_setting("show_carry_items", false)
 despawn(container)
 frames(2)
 
--- Power cells: their own group, off by default; a cell plugged into a medicae station is socket_lock.
+-- Power cells share the option; a cell plugged into a medicae station is socket_lock.
 local cell_state = { state = "sleep" }
 local cell = spawn(16, "luggable", { pickup_type = "battery_01_luggable" }, {
     locomotion_system = { current_state = function()
@@ -781,17 +780,13 @@ local cell = spawn(16, "luggable", { pickup_type = "battery_01_luggable" }, {
 
 frames(2)
 check(element:marker_for(cell) == nil, "power cells off by default")
-set_setting("show_containers", true)
-frames(2)
-check(element:marker_for(cell) == nil, "power cells are not part of mission containers")
-set_setting("show_power_cells", true)
+set_setting("show_carry_items", true)
 frames(2)
 check(element:marker_for(cell) ~= nil, "hidden power cell shown once turned on")
 cell_state.state = "socket_lock"
 frames(2)
 check(element:marker_for(cell) == nil, "plugged-in power cell has no marker")
-set_setting("show_containers", false)
-set_setting("show_power_cells", false)
+set_setting("show_carry_items", false)
 despawn(cell)
 frames(2)
 
