@@ -326,6 +326,7 @@ local settings = {
     show_scriptures = false,
     show_heretical_idols = false,
     show_containers = false,
+    show_power_cells = false,
 }
 
 local hooks = {}
@@ -768,6 +769,30 @@ frames(2)
 check(element:marker_for(container) == nil, "container without a synced state has no marker")
 set_setting("show_containers", false)
 despawn(container)
+frames(2)
+
+-- Power cells: their own group, off by default; a cell plugged into a medicae station is socket_lock.
+local cell_state = { state = "sleep" }
+local cell = spawn(16, "luggable", { pickup_type = "battery_01_luggable" }, {
+    locomotion_system = { current_state = function()
+        return cell_state.state
+    end },
+})
+
+frames(2)
+check(element:marker_for(cell) == nil, "power cells off by default")
+set_setting("show_containers", true)
+frames(2)
+check(element:marker_for(cell) == nil, "power cells are not part of mission containers")
+set_setting("show_power_cells", true)
+frames(2)
+check(element:marker_for(cell) ~= nil, "hidden power cell shown once turned on")
+cell_state.state = "socket_lock"
+frames(2)
+check(element:marker_for(cell) == nil, "plugged-in power cell has no marker")
+set_setting("show_containers", false)
+set_setting("show_power_cells", false)
+despawn(cell)
 frames(2)
 
 -- 13. While the HUD does not update (menu open, dead), nothing is added or rebuilt, and
