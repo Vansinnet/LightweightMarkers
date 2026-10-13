@@ -1,5 +1,5 @@
 # LightweightStrategicalMarkers: design
-Status 2026-10-13: 1.0.0 (unreleased), ModID `LightweightStrategicalMarkers`. Verified: static and offline (`tests/`); independent source review 2026-10-13; base markers confirmed in game by the user 2026-10-13, collectibles not yet.
+Status 2026-10-13: 0.99.0 released on GitHub, ModID `LightweightStrategicalMarkers`. Verified: static and offline (`tests/`); independent source review 2026-10-13; all features confirmed in game by the user 2026-10-13.
 
 Lightweight markers for ammo, grenade refills, medical crates, stimms, health stations and chests, built as a lean alternative to Markers Improved AIO (`referensmoddar/markers_aio`).
 
@@ -91,7 +91,7 @@ Smallest in-game test:
 
 8. Options: turn on plasteel, diamantine, grimoires, scriptures and heretical idols. Expected: those items get markers; a destroyed idol loses its marker.
 
-Confirmed in game 2026-10-13 (user): the base markers work. Runtime-pending: steps 3-8 individually; also hot-join, dedicated-server versus Psykanium, expedition ammo crates, frame cost compared with Markers Improved AIO.
+Confirmed in game 2026-10-13 (user): everything tested works, including the 15 m hand-over and the material and collectible options.
 
 ## Open items
 - 2026-10-13: confirm in game that chests and health stations are discovered on a client (their type comes from level data, which is not Lua and could not be checked).
