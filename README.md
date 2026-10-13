@@ -36,7 +36,7 @@ Within about 15 m the game shows its own marker for the same item. This mod's ma
 | See markers through walls | Off | When off, a marker shows only while the item is in line of sight. |
 | Marker distance (m) | 40 (10–200) | How far away markers are shown. |
 | Marker size (%) | 100 (50–200) | Size of the markers. |
-| Show distance | On | Distance in metres below each marker. |
+| Show distance | Off | Distance in metres below each marker. |
 | Items | All on | Ammo, grenades, medical crates, stimms, health stations and chests can each be turned off. |
 | Materials and collectibles | All off | Plasteel, diamantine, grimoires, scriptures and heretical idols. A group that is off costs nothing: its items are not even tracked. |
 
