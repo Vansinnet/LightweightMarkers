@@ -49,7 +49,7 @@ Markers Improved AIO marks the same items. Turn off its matching categories, or 
 
 ## Testing status
 
-Developed against Darktide 1.13.1. Static checks and offline tests pass. The base markers work in game; the material and collectible options are not yet tested in game.
+Developed against Darktide 1.13.1. Static checks and offline tests pass, and all features have been tested in game.
 
 ## License
 
