@@ -1,0 +1,64 @@
+[size=5][b]Lightweight Markers[/b][/size]
+
+Markers on the items you actually look for in a mission: ammo, grenades, medical crates, stimms, health stations and chests. They use the game's own icons and frames, so they look like part of the game, and they are built to cost as little performance as possible.
+
+[size=4][b]What is marked[/b][/size]
+[list]
+[*][b]Ammo[/b]: small and large ammo, carried and deployed ammo crates, and expedition ammo crates
+[*][b]Grenade refills[/b]
+[*][b]Medical crates[/b]: carried and deployed
+[*][b]Stimms[/b]: coloured by type (medical green, power red, speed blue, concentration yellow)
+[*][b]Health stations[/b]: green, with the remaining charges; dimmed when empty
+[*][b]Chests[/b]: the marker disappears once the chest is opened
+[*][b]Optional, off by default[/b]: plasteel and diamantine (light blue), grimoires, scriptures, and the heretical idols the mission actually uses (removed once destroyed)
+[/list]
+
+[size=4][b]Seamless with the game's own markers[/b][/size]
+Within about 15 m the game shows its own marker for an item. Lightweight Markers then fades out, so there is never a double icon, and the interaction prompt and tags look as usual. The markers use the game's frame and size at that distance, and the game's marker gets the same colour, so an item keeps its colour at every distance.
+
+[size=4][b]Tagging[/b][/size]
+Aim at a marker and tag it as usual, also beyond the game's 15 m and, with "See markers through walls" on, behind walls. Chests and heretical idols cannot be tagged, as in the base game.
+
+[size=4][b]Settings[/b][/size]
+[list]
+[*][b]See markers through walls[/b] (off): when off, a marker shows only while the item is in line of sight
+[*][b]Marker distance[/b] (40 m, 10-200 m)
+[*][b]Marker size[/b] (100 %, 50-200 %)
+[*][b]Show distance[/b] (off): distance in metres below each marker
+[*][b]Item groups[/b]: every group can be turned off; a group that is off is not even tracked
+[/list]
+
+[size=4][b]Why it is lightweight[/b][/size]
+[list]
+[*]No game function is replaced. The mod only adds its own marker type next to the game's.
+[*]Items are found once, when they spawn. Nothing scans the level.
+[*]Only items within the marker distance get a marker, so just a handful are live at a time. The list of nearby items is refreshed four times a second, not every frame.
+[*]Nothing is allocated and no setting is read per frame, and hidden markers are not drawn.
+[*]Nothing runs while the mod is disabled.
+[/list]
+
+[size=4][b]Compared with an all-in-one marker mod[/b][/size]
+All-in-one marker mods mark far more (objectives, luggables, side missions, event items and more) and offer hundreds of options, and they are great if you want all of that. Lightweight Markers does less on purpose. Measured against a popular all-in-one marker mod:
+[list]
+[*][b]Code[/b]: about 1,100 lines in 5 files, against about 18,000 lines in 28 files
+[*][b]Game functions replaced[/b]: none, against the world-marker HUD's update and draw functions and parts of the interaction HUD
+[*][b]Hooks running every frame[/b]: none, against several, including one on every destructible object in the level
+[*][b]Settings[/b]: about 15, against several hundred
+[/list]
+If you only need the essential pickups marked, this is the leaner choice.
+
+[size=4][b]Compatibility[/b][/size]
+All-in-one marker mods mark the same items. Turn off their matching categories, or disable them, or both mods show a marker on the same item.
+
+[size=4][b]Requirements[/b][/size]
+Darktide Mod Framework (DMF)
+
+[size=4][b]Installation[/b][/size]
+[list=1]
+[*]Install and enable Darktide Mod Framework and its required mod loader.
+[*]Extract the [b]LightweightMarkers[/b] folder into Darktide's [b]mods[/b] folder.
+[*]Add [b]LightweightMarkers[/b] as a line in [b]mods/mod_load_order.txt[/b] and start the game.
+[/list]
+
+[size=4][b]Source[/b][/size]
+[url=https://github.com/Vansinnet/LightweightMarkers]github.com/Vansinnet/LightweightMarkers[/url] (MIT License)
