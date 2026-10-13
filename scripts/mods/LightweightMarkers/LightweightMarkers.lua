@@ -210,6 +210,17 @@ local function idol_destroyed(unit)
     return not destruction_info or destruction_info.current_stage_index == 0
 end
 
+-- A luggable can be picked up only in these locomotion states (luggable_interaction.lua,
+-- interactor_condition_func); carried and socket_lock are not among them. The husk locomotion on
+-- clients reports the synced state (projectile_husk_locomotion_extension.lua, current_state).
+local LUGGABLE_FREE_STATES = require("scripts/settings/projectile_locomotion/projectile_locomotion_settings").valid_interaction_states
+
+local function luggable_free(unit)
+    local locomotion = ScriptUnit.has_extension(unit, "locomotion_system")
+
+    return locomotion ~= nil and LUGGABLE_FREE_STATES[locomotion:current_state()] == true
+end
+
 -- After enabling or a hot reload the interactables already exist; collect them once.
 local function seed()
     clear_registry()
@@ -389,6 +400,9 @@ local function sweep()
             elseif wanted and kind.idol and idol_destroyed(unit) then
                 wanted = false
                 finished = true
+            elseif wanted and kind.luggable and not luggable_free(unit) then
+                -- Carried, thrown or delivered; it can be dropped again, so it stays tracked.
+                wanted = false
             end
 
             if wanted then

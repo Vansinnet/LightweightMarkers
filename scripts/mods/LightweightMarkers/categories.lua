@@ -55,6 +55,8 @@ local kinds = {
     plasteel_large = kind("plasteel", "environment_generic", MATERIAL_LIGHT_BLUE),
     diamantine_small = kind("diamantine", "environment_generic", MATERIAL_LIGHT_BLUE),
     diamantine_large = kind("diamantine", "environment_generic", MATERIAL_LIGHT_BLUE),
+    -- Mission containers carried to a socket; vanilla's luggable template icon.
+    luggable_container = kind("containers", "default"),
     grimoire = kind("grimoires", "pocketable_default"),
     scripture = kind("scriptures", "pocketable_default"),
     -- Vanilla shows no marker on idols; this is the game's priority-target icon.
@@ -66,6 +68,7 @@ kinds.health_station.frame = "point_of_interest"
 
 kinds.health_station.charges = true
 kinds.chest.chest = true
+kinds.luggable_container.luggable = true
 kinds.heretical_idol.idol = true
 
 for name, data in pairs(kinds) do
@@ -89,6 +92,9 @@ local by_pickup = {
     large_metal = kinds.plasteel_large,
     small_platinum = kinds.diamantine_small,
     large_platinum = kinds.diamantine_large,
+    container_01_luggable = kinds.luggable_container,
+    container_02_luggable = kinds.luggable_container,
+    container_03_luggable = kinds.luggable_container,
     grimoire = kinds.grimoire,
     tome = kinds.scripture,
 }
@@ -111,6 +117,7 @@ local group_settings = {
     chests = "show_chests",
     plasteel = "show_plasteel",
     diamantine = "show_diamantine",
+    containers = "show_containers",
     grimoires = "show_grimoires",
     scriptures = "show_scriptures",
     heretical_idols = "show_heretical_idols",

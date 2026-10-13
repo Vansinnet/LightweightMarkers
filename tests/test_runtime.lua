@@ -89,6 +89,11 @@ package.preload["scripts/managers/ui/ui_widget"] = function()
     }
 end
 
+-- table.enum states are their own names (scripts/settings/projectile_locomotion/projectile_locomotion_settings.lua).
+package.preload["scripts/settings/projectile_locomotion/projectile_locomotion_settings"] = function()
+    return { valid_interaction_states = { sleep = true, manual_physics = true, engine_physics = true } }
+end
+
 -- Fake HUD ---------------------------------------------------------------------------------------
 
 local TEMPLATE_NAME = "LightweightMarkers_marker"
@@ -320,6 +325,7 @@ local settings = {
     show_grimoires = false,
     show_scriptures = false,
     show_heretical_idols = false,
+    show_containers = false,
 }
 
 local hooks = {}
@@ -733,6 +739,35 @@ despawn(small_metal)
 despawn(tome)
 ALIVE[new_idol] = nil
 destructible_map[new_idol] = nil
+frames(2)
+
+-- Mission containers: off by default, hidden while carried, thrown or socketed, back when dropped.
+local container_state = { state = "sleep" }
+local container = spawn(14, "luggable", { pickup_type = "container_02_luggable" }, {
+    locomotion_system = { current_state = function()
+        return container_state.state
+    end },
+})
+
+frames(2)
+check(element:marker_for(container) == nil, "containers off by default")
+set_setting("show_containers", true)
+frames(2)
+check(element:marker_for(container) ~= nil, "container shown once turned on")
+container_state.state = "carried"
+frames(2)
+check(element:marker_for(container) == nil, "carried container has no marker")
+container_state.state = "engine_physics"
+frames(2)
+check(element:marker_for(container) ~= nil, "dropped container is marked again")
+container_state.state = "socket_lock"
+frames(2)
+check(element:marker_for(container) == nil, "delivered container has no marker")
+container_state.state = nil
+frames(2)
+check(element:marker_for(container) == nil, "container without a synced state has no marker")
+set_setting("show_containers", false)
+despawn(container)
 frames(2)
 
 -- 13. While the HUD does not update (menu open, dead), nothing is added or rebuilt, and

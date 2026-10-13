@@ -25,7 +25,8 @@ Lightweight markers for ammo, grenade refills, medical crates, stimms, health st
 - 2026-10-13 (user, answered): chest contents cannot be shown online. Reserved items are decided on the server at mission start and never sent; the rest is rolled on opening from the team's needs (`pickup_system.lua`, `_populate_pickups`, `get_rubberband_pickup`). Only possible when the local machine is the server (Psykanium, SoloPlay); not built.
 - 2026-10-13 (user): our markers can be tagged, with and without "See markers through walls", at the marker distance. Vanilla allows tagging only through its own interaction marker (15 m, line of sight) or a crosshair ray that stops at walls.
 - 2026-10-13 (user): Nexus page 1450 (draft). `NEXUS_DESCRIPTION.bbcode` is the page description, published by `.github/workflows/nexus-description.yml` (copied from AnotherScoreboard; Nexus API v3 `PATCH /mods/{id}`, repository secret `NEXUSMODS_APIKEY`). Its comparison with an all-in-one marker mod (measured on Markers Improved AIO: about 18,000 Lua lines in 28 files, replaced world-marker HUD functions, per-frame hooks, about 380 setting ids) never names that mod.
-- 2026-10-13: not marked: luggables, expedition-only pickups except the large ammo crate, live-event items (including the nurgle totem Markers AIO lists under idols). The ignore list in `tests/test_categories.lua` names each pickup.
+- 2026-10-13 (user): mission containers (luggable `container_01/02/03_luggable`) as an option, off by default. Hidden while not in a pick-up state: the sweep reads `locomotion_system:current_state()` against `ProjectileLocomotionSettings.valid_interaction_states`, the luggable interaction's own condition (`luggable_interaction.lua:17-46`); carried and `socket_lock` are excluded, and the client husk reports the synced state (`projectile_husk_locomotion_extension.lua:73-75,220-253`). They stay tracked, so a dropped container is marked again. Other luggables (batteries, control rods, prismata cases) stay unmarked.
+- 2026-10-13: not marked: luggables other than mission containers, expedition-only pickups except the large ammo crate, live-event items (including the nurgle totem Markers AIO lists under idols). The ignore list in `tests/test_categories.lua` names each pickup.
 
 ## Discovery
 - `hook_safe` on `InteracteeExtension.set_interaction_context` (`scripts/extension_systems/interaction/interactee_extension.lua:99`). Spawned units reach it from `init` (`:47`): on a client the pickup husk already carries unit data `pickup_type` (`scripts/extension_systems/unit_templates/pickup_unit_template.lua:172`; extensions are created after `husk_init` returns, `scripts/foundation/managers/extension/extension_manager.lua:170-175`). Level chests and health stations reach it from the `Interactable` component (`scripts/components/interactable.lua:76`), which runs on clients too.
@@ -79,13 +80,14 @@ Lightweight markers for ammo, grenade refills, medical crates, stimms, health st
 | `UIHud:element`, visible elements | `scripts/managers/ui/ui_hud.lua:20,271,387` |
 | `HudElementBase` `_parent`, `has_widget`, `_unregister_widget_name` | `scripts/ui/hud/elements/hud_element_base.lua:13,56-64` |
 | Idol pick and destruction | `scripts/managers/collectibles/collectibles_manager.lua:28-66`; `scripts/extension_systems/destructible/destructible_extension.lua:125-133,338-395,434-436`; `gameplay_init_step_pacing.lua:20` |
+| Luggable pick-up states, client state | `scripts/extension_systems/interaction/interactions/luggable_interaction.lua:17-46`; `scripts/settings/projectile_locomotion/projectile_locomotion_settings.lua:7,15-19`; `scripts/extension_systems/locomotion/projectile_husk_locomotion_extension.lua:73-75`; `scripts/extension_systems/unit_templates/pickup_unit_template.lua:186-197` |
 | `ALIVE` lifetime | `scripts/managers/position_lookup/position_lookup_manager.lua:40,44` |
 | `Camera.local_position`, `math.easeCubic` (LuaCATS added 2026-10-13) | `types/SOURCES.md` |
 | DMF events, hooks, lifecycle | `dmf-source/scripts/mods/dmf/modules/core/events.lua:11-70`, `hooks.lua:181-185,318-333`, `toggling.lua:10-22`, `dmf_loader.lua:89-98` |
 
 ## Tests
-- `tools/luajit/luajit mods/active/LightweightMarkers/tests/test_categories.lua` -> 2026-10-13: 61 pickups, 17 marked, 44 ignored, 3 interaction types, 0 failures.
-- `tools/luajit/luajit mods/active/LightweightMarkers/tests/test_runtime.lua` -> 2026-10-13: 13692 checks, 0 failures.
+- `tools/luajit/luajit mods/active/LightweightMarkers/tests/test_categories.lua` -> 2026-10-13: 61 pickups, 20 marked, 41 ignored, 3 interaction types, 0 failures.
+- `tools/luajit/luajit mods/active/LightweightMarkers/tests/test_runtime.lua` -> 2026-10-13: 13700 checks, 0 failures.
 - `tools\validate.ps1 mods\active\LightweightMarkers` -> 2026-10-13: LuaLS 0 diagnostics, LuaJIT load passed.
 
 ## Runtime status
