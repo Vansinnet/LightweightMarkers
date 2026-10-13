@@ -43,7 +43,7 @@ Lightweight markers for ammo, grenade refills, medical crates, stimms, health st
 - Passes: background, ring and icon with vanilla's textures, colours and hand-over sizes (`marker_template.lua`, FRAMES), a distance label and a charge count. One widget definition is cached and shared (`UIWidget.init` clones content, style and passes, `scripts/managers/ui/ui_widget.lua:14-33`).
 - `on_enter` writes per-marker settings into the marker's own deep-copied template (`table.clone`, `scripts/foundation/utilities/table.lua:38-52`): position offset (0.8 m for pickups like vanilla's "pickup" visuals, 0 for chests and stations), max distance, line-of-sight check and edge fade (`easing_function` is required, `_get_fade` calls it unguarded).
 - `update_function` runs every frame for each live marker after `draw` is decided (`hud_element_world_markers.lua:461-474`, call at `:470`). It allocates nothing and reads no settings. Alpha = line of sight x empty-station dim x (1 - vanilla's alpha); at about zero it sets `draw = false` so the widget is not drawn. Distance text comes from a prebuilt table and changes only when the whole metre does.
-- Vanilla recolour: a `hook_safe` on the interaction template's `update_function` (`world_marker_template_interaction.lua:673-799`) writes the kind's colour into its icon when the unit is tracked and the kind has its own colour (`recolor`). Vanilla sets that colour only in `setup_marker_by_interaction_type` (`:480-518`, on a visual-type change such as tagging), so the hook runs after it every frame. Each marker clones the template when added (`hud_element_world_markers.lua`, `_template_by_type`), so clones carry the hooked function. Items of a group that is off are not tracked and keep vanilla's colour.
+- Vanilla recolour: a `hook_safe` on `HudElementWorldMarkers.event_add_world_marker_unit` (once per added marker) finds a new `interaction` marker under the newest id (`_register_marker`, `hud_element_world_markers.lua:168-188`) and swaps the update function in its own template copy (`_template_by_type` clones per marker) for a plain wrapper. The wrapper calls vanilla's update (`world_marker_template_interaction.lua:673-799`), keeps its return value and writes the kind's colour into the icon when the unit is tracked and the kind has its own colour (`recolor`). Vanilla sets that colour only in `setup_marker_by_interaction_type` (`:480-518`, on a visual-type change such as tagging), and a template it re-clones there keeps the wrapper. A per-frame DMF hook was rejected: it allocates a return table and runs xpcall for every interaction marker every frame. Enable wraps existing interaction markers; disable and unload restore the original function. Items of a group that is off are not tracked and keep vanilla's colour.
 - Vanilla yield: vanilla's marker for the unit is found through `HudElementInteraction._interaction_units[unit].marker_id` (`scripts/ui/hud/elements/interaction/hud_element_interaction.lua:64-106`) and `_markers_by_id`; its alpha is its line-of-sight alpha times its distance fade unless tagged. While it is fully shown, ours is hidden and its line-of-sight check is off, so it takes no raycasts.
 - Raycasts: the HUD runs 10 every 5th frame for all markers, longest-waiting first (`hud_element_world_markers_settings.lua`, `hud_element_world_markers.lua:11-23,441-447`). Our markers' wait ages at half speed so vanilla markers keep priority.
 - `on_exit` releases the widget name in the element that created it (vanilla keeps every marker widget name for the element's lifetime).
@@ -68,7 +68,8 @@ Lightweight markers for ammo, grenade refills, medical crates, stimms, health st
 | World-marker events, template fields, update order, removal | `scripts/ui/hud/elements/world_markers/hud_element_world_markers.lua:27-75,106-135,168-226,246-490,492-577,795-799` |
 | Raycast budget | `scripts/ui/hud/elements/world_markers/hud_element_world_markers_settings.lua` |
 | Vanilla interaction marker (15 m, fade, offsets, LOS alpha) | `scripts/ui/hud/elements/world_markers/templates/world_marker_template_interaction.lua` |
-| Vanilla icon colour set on visual-type change; update order | `world_marker_template_interaction.lua:480-518,673-799` |
+| Vanilla icon colour set on visual-type change; update return | `world_marker_template_interaction.lua:480-518,673-799` |
+| Marker registration under the newest id, per-marker template clone | `hud_element_world_markers.lua:106-135,168-188` |
 | `HudElementInteraction._interaction_units` | `scripts/ui/hud/elements/interaction/hud_element_interaction.lua:14,64-106,108-120` |
 | `UIHud:element`, visible elements | `scripts/managers/ui/ui_hud.lua:20,271,387` |
 | `HudElementBase` `_parent`, `has_widget`, `_unregister_widget_name` | `scripts/ui/hud/elements/hud_element_base.lua:13,56-64` |
@@ -79,7 +80,7 @@ Lightweight markers for ammo, grenade refills, medical crates, stimms, health st
 
 ## Tests
 - `tools/luajit/luajit mods/active/LightweightStrategicalMarkers/tests/test_categories.lua` -> 2026-10-13: 61 pickups, 17 marked, 44 ignored, 3 interaction types, 0 failures.
-- `tools/luajit/luajit mods/active/LightweightStrategicalMarkers/tests/test_runtime.lua` -> 2026-10-13: 13682 checks, 0 failures.
+- `tools/luajit/luajit mods/active/LightweightStrategicalMarkers/tests/test_runtime.lua` -> 2026-10-13: 13688 checks, 0 failures.
 - `tools\validate.ps1 mods\active\LightweightStrategicalMarkers` -> 2026-10-13: LuaLS 0 diagnostics, LuaJIT load passed.
 
 ## Runtime status
