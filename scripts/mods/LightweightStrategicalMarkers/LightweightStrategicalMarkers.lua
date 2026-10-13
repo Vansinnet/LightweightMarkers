@@ -1,1 +1,429 @@
 local mod = get_mod("LightweightStrategicalMarkers")
+
+local PATH = "LightweightStrategicalMarkers/scripts/mods/LightweightStrategicalMarkers/"
+
+local function load(name)
+    local chunk = mod:io_dofile(PATH .. name)
+
+    if not chunk then
+        error("failed to load " .. name)
+    end
+
+    return chunk
+end
+
+local Categories = load("categories")
+
+-- Named after the ModID so a renamed copy of the mod never shares (and removes) this template.
+local TEMPLATE_NAME = mod:get_name() .. "_marker"
+-- Registry pass that adds and removes markers by distance and refreshes chest and station state.
+local SWEEP_INTERVAL = 0.25
+-- Markers are added this far beyond the marker distance (so they fade in at the edge) and removed
+-- only further out, so walking along the edge does not churn widgets.
+local ADD_MARGIN = 5
+local KEEP_MARGIN = 10
+local EMPTY_STATION_ALPHA = 0.45
+
+local COUNT_TEXT = {}
+
+for charges = 0, 9 do
+    COUNT_TEXT[charges] = tostring(charges)
+end
+
+local config = {
+    group_enabled = {},
+}
+-- element: the HudElementWorldMarkers our template is registered in; marker ids belong to it.
+-- interaction_units: that HUD's HudElementInteraction._interaction_units, refreshed every sweep.
+local state = {
+    element = nil,
+    interaction_units = nil,
+}
+local marker_by_unit = {}
+
+local template = load("marker_template")({
+    config = config,
+    state = state,
+    marker_by_unit = marker_by_unit,
+    template_name = TEMPLATE_NAME,
+})
+
+local function refresh_config()
+    config.see_through_walls = mod:get("see_through_walls") == true
+    config.max_distance = mod:get("max_distance") or 40
+    config.marker_scale = (mod:get("marker_scale") or 100) / 100
+    config.show_distance = mod:get("show_distance") ~= false
+
+    for group, setting_id in pairs(Categories.group_settings) do
+        config.group_enabled[group] = mod:get(setting_id) ~= false
+    end
+end
+
+refresh_config()
+
+-- Registry of marked interactables: dense arrays with swap-remove, filled when units spawn.
+local units = {}
+local kinds = {}
+local index_of = {}
+local count = 0
+
+local function track(unit, kind)
+    if index_of[unit] then
+        return
+    end
+
+    count = count + 1
+    units[count] = unit
+    kinds[count] = kind
+    index_of[unit] = count
+end
+
+local function untrack_at(i)
+    local unit = units[i]
+    local last = count
+
+    index_of[unit] = nil
+
+    if i ~= last then
+        local moved = units[last]
+
+        units[i] = moved
+        kinds[i] = kinds[last]
+        index_of[moved] = i
+    end
+
+    units[last] = nil
+    kinds[last] = nil
+    count = last - 1
+end
+
+local function clear_registry()
+    table.clear(units)
+    table.clear(kinds)
+    table.clear(index_of)
+    count = 0
+end
+
+local function pickup_type(unit)
+    if Unit.has_data(unit, "pickup_type") then
+        return Unit.get_data(unit, "pickup_type")
+    end
+end
+
+-- Runs once per interactable when it gets its interaction type: from InteracteeExtension.init for
+-- spawned units (pickups, deployed crates) and from the Interactable component for level units
+-- such as chests and health stations (scripts/components/interactable.lua).
+mod:hook_safe("InteracteeExtension", "set_interaction_context", function(self, interaction_type)
+    local unit = self._unit
+
+    if not interaction_type or index_of[unit] then
+        return
+    end
+
+    local kind = Categories.classify(pickup_type(unit), interaction_type)
+
+    if kind then
+        track(unit, kind)
+    end
+end)
+
+-- After enabling or a hot reload the interactables already exist; collect them once.
+local function seed()
+    clear_registry()
+
+    local state_managers = Managers.state
+    local extension_manager = state_managers and state_managers.extension
+    local interactee_system = extension_manager and extension_manager:system("interactee_system")
+
+    -- ALIVE is the PositionLookupManager's unit table; it is nil between game states
+    -- (scripts/managers/position_lookup/position_lookup_manager.lua, init and destroy).
+    local ALIVE = ALIVE
+
+    if not interactee_system or not ALIVE then
+        return
+    end
+
+    for unit, extension in pairs(interactee_system:unit_to_extension_map()) do
+        if ALIVE[unit] then
+            local kind
+            local unit_pickup_type = pickup_type(unit)
+
+            if unit_pickup_type then
+                kind = Categories.classify(unit_pickup_type)
+            else
+                -- Every interaction type the unit was given, active or not (interactee_extension.lua,
+                -- set_interaction_context). PlayerInteracteeExtension has no such table.
+                local interactions = rawget(extension, "_interactions")
+
+                if interactions then
+                    for interaction_type in pairs(interactions) do
+                        kind = Categories.classify(nil, interaction_type)
+
+                        if kind then
+                            break
+                        end
+                    end
+                end
+            end
+
+            if kind then
+                track(unit, kind)
+            end
+        end
+    end
+end
+
+local function add_marker(unit, kind)
+    -- Vanilla's own icon for this unit, including level overrides; the kind's icon otherwise.
+    local interactee = ScriptUnit.has_extension(unit, "interactee_system")
+    local icon = interactee and interactee:interaction_icon() or kind.icon
+
+    -- on_enter runs synchronously inside the trigger and records the marker in marker_by_unit.
+    Managers.event:trigger("add_world_marker_unit", TEMPLATE_NAME, unit, nil, {
+        kind = kind,
+        icon = icon,
+    })
+end
+
+-- The HUD drops a marker flagged `remove` on its next update and then calls on_exit.
+local function remove_marker(unit)
+    local marker = marker_by_unit[unit]
+
+    if marker then
+        marker_by_unit[unit] = nil
+        marker.remove = true
+        marker.draw = false
+    end
+end
+
+local function remove_all_markers()
+    for _, marker in pairs(marker_by_unit) do
+        marker.remove = true
+        marker.draw = false
+    end
+
+    table.clear(marker_by_unit)
+end
+
+local function refresh_charges(unit, marker)
+    local station = ScriptUnit.has_extension(unit, "health_station_system")
+    local charges = station and station:charge_amount()
+
+    if charges ~= marker.lsm_charges then
+        marker.lsm_charges = charges
+        marker.widget.content.count = charges and (COUNT_TEXT[charges] or tostring(charges)) or nil
+        marker.lsm_dim = charges == 0 and EMPTY_STATION_ALPHA or 1
+    end
+end
+
+-- The HUD updates (and so applies `remove` and runs on_exit) only elements in a visible group:
+-- not while a menu, the tactical overlay or a cutscene is up, nor while dead
+-- (scripts/managers/ui/ui_hud.lua, update; hud_elements_player.lua, HudElementWorldMarkers).
+local function world_markers_updating(element)
+    local hud = element._parent
+    local visible_elements = hud and hud._currently_visible_elements
+
+    return visible_elements == nil or visible_elements.HudElementWorldMarkers == true
+end
+
+local function purge_dead(ALIVE)
+    local i = 1
+
+    while i <= count do
+        local unit = units[i]
+
+        if ALIVE[unit] then
+            i = i + 1
+        else
+            remove_marker(unit)
+            untrack_at(i)
+        end
+    end
+end
+
+local function sweep()
+    local ALIVE = ALIVE
+
+    if not ALIVE then
+        return
+    end
+
+    local element = state.element
+    local camera = element and element:_get_camera()
+
+    if not camera or not world_markers_updating(element) then
+        -- No markers to manage now, but picked-up items still leave the registry.
+        purge_dead(ALIVE)
+
+        return
+    end
+
+    local hud = element._parent
+    local interaction = hud and hud:element("HudElementInteraction")
+
+    state.interaction_units = interaction and interaction._interaction_units or nil
+
+    local camera_position = Camera.local_position(camera)
+    local max_distance = config.max_distance
+    local add_distance_sq = (max_distance + ADD_MARGIN) ^ 2
+    local keep_distance_sq = (max_distance + KEEP_MARGIN) ^ 2
+    local group_enabled = config.group_enabled
+    local i = 1
+
+    while i <= count do
+        local unit = units[i]
+
+        if not ALIVE[unit] then
+            -- Picked up or despawned; the HUD removes its marker itself.
+            remove_marker(unit)
+            untrack_at(i)
+        else
+            local kind = kinds[i]
+            local marker = marker_by_unit[unit]
+            local wanted = group_enabled[kind.group]
+            local finished = false
+
+            if wanted and kind.chest then
+                local chest = ScriptUnit.has_extension(unit, "chest_system")
+
+                -- An opened chest never closes again.
+                if chest and chest:is_open() then
+                    wanted = false
+                    finished = true
+                end
+            end
+
+            if wanted then
+                local distance_sq = Vector3.distance_squared(Unit.world_position(unit, 1), camera_position)
+
+                wanted = distance_sq <= (marker and keep_distance_sq or add_distance_sq)
+            end
+
+            if wanted then
+                if not marker then
+                    add_marker(unit, kind)
+
+                    marker = marker_by_unit[unit]
+                end
+
+                if marker and kind.charges then
+                    refresh_charges(unit, marker)
+                end
+            elseif marker then
+                remove_marker(unit)
+            end
+
+            if finished then
+                untrack_at(i)
+            else
+                i = i + 1
+            end
+        end
+    end
+end
+
+local sweep_timer = 0
+
+local function update(dt)
+    sweep_timer = sweep_timer + dt
+
+    if sweep_timer < SWEEP_INTERVAL then
+        return
+    end
+
+    sweep_timer = sweep_timer - SWEEP_INTERVAL
+
+    if sweep_timer > SWEEP_INTERVAL then
+        sweep_timer = 0
+    end
+
+    if count > 0 then
+        sweep()
+    end
+end
+
+local function register(element)
+    element._marker_templates[TEMPLATE_NAME] = template
+
+    if element ~= state.element then
+        -- Ids issued by another HUD mean nothing here.
+        table.clear(marker_by_unit)
+        state.element = element
+        state.interaction_units = nil
+    end
+end
+
+local function unregister()
+    local element = state.element
+
+    if element then
+        element._marker_templates[TEMPLATE_NAME] = nil
+    end
+
+    state.element = nil
+    state.interaction_units = nil
+end
+
+local function current_element()
+    local ui_manager = Managers.ui
+    local hud = ui_manager and ui_manager:get_hud()
+
+    return hud and hud:element("HudElementWorldMarkers")
+end
+
+mod:hook_safe("HudElementWorldMarkers", "init", register)
+
+mod:hook_safe("HudElementWorldMarkers", "destroy", function(self)
+    if self == state.element then
+        table.clear(marker_by_unit)
+        state.element = nil
+        state.interaction_units = nil
+    end
+end)
+
+mod.on_enabled = function()
+    refresh_config()
+    seed()
+
+    local element = current_element()
+
+    if element then
+        register(element)
+    end
+
+    sweep_timer = SWEEP_INTERVAL
+    mod.update = update
+end
+
+mod.on_disabled = function()
+    mod.update = nil
+    remove_all_markers()
+    unregister()
+    clear_registry()
+end
+
+mod.on_unload = function(exit_game)
+    mod.update = nil
+
+    if exit_game then
+        return
+    end
+
+    remove_all_markers()
+    unregister()
+    clear_registry()
+end
+
+mod.on_setting_changed = function()
+    refresh_config()
+    -- Markers take their settings in on_enter; the next sweep rebuilds them.
+    remove_all_markers()
+    sweep_timer = SWEEP_INTERVAL
+end
+
+mod.on_game_state_changed = function(status, state_name)
+    if status == "exit" and state_name == "StateGameplay" then
+        remove_all_markers()
+        clear_registry()
+    end
+end
