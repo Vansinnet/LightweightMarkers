@@ -52,7 +52,7 @@ local function refresh_config()
     config.see_through_walls = mod:get("see_through_walls") == true
     config.max_distance = mod:get("max_distance") or 40
     config.marker_scale = (mod:get("marker_scale") or 100) / 100
-    config.show_distance = mod:get("show_distance") ~= false
+    config.show_distance = mod:get("show_distance") == true
 
     for group, setting_id in pairs(Categories.group_settings) do
         config.group_enabled[group] = mod:get(setting_id) ~= false

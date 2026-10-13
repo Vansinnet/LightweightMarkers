@@ -30,7 +30,7 @@ return {
                 default_value = 100,
                 range = { 50, 200 },
             },
-            checkbox("show_distance", true),
+            checkbox("show_distance", false),
             {
                 setting_id = "categories",
                 type = "group",

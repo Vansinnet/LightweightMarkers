@@ -18,6 +18,7 @@ Lightweight markers for ammo, grenade refills, medical crates, stimms, health st
 - 2026-10-13 (user): health station charges shown, empty stations dimmed, distance in metres (setting, on).
 - 2026-10-13 (user): a marker distance setting so players can see further: 40 m default, 10-200 m.
 - 2026-10-13 (user): plasteel, diamantine, grimoires, scriptures and heretical idols as options, off by default, as light as possible.
+- 2026-10-13 (user): "Show distance" off by default.
 - 2026-10-13 (user, answered): chest contents cannot be shown online. Reserved items are decided on the server at mission start and never sent; the rest is rolled on opening from the team's needs (`pickup_system.lua`, `_populate_pickups`, `get_rubberband_pickup`). Only possible when the local machine is the server (Psykanium, SoloPlay); not built.
 - 2026-10-13: not marked: luggables, expedition-only pickups except the large ammo crate, live-event items (including the nurgle totem Markers AIO lists under idols). The ignore list in `tests/test_categories.lua` names each pickup.
 
@@ -80,9 +81,9 @@ Lightweight markers for ammo, grenade refills, medical crates, stimms, health st
 ## Runtime status
 Smallest in-game test:
 1. Enable Lightweight Strategical Markers; turn off Markers Improved AIO's matching categories or disable it. Restart the game (first install).
-2. Start a low-difficulty mission. Expected: markers with distances on ammo, grenades, medical crates, stimms, health stations and chests within 40 m, only for items in line of sight.
+2. Start a low-difficulty mission. Expected: markers on ammo, grenades, medical crates, stimms, health stations and chests within 40 m, only for items in line of sight, without distance text ("Show distance" is off by default).
 3. Walk up to a pickup. Expected: at about 15 m the marker hands over to the game's own marker; never two icons on one item.
-4. Options: turn on "See markers through walls". Expected: items behind walls get markers. Set "Marker distance" to 150. Expected: far items appear.
+4. Options: turn on "See markers through walls". Expected: items behind walls get markers. Set "Marker distance" to 150. Expected: far items appear. Turn on "Show distance". Expected: distance in metres appears below the markers.
 5. Open a chest. Expected: its marker disappears and the items inside get their own.
 6. Use a health station. Expected: the charge count drops; at 0 the marker dims.
 7. Ctrl+Shift+R mid-mission. Expected: markers come back, no errors in the console log.
