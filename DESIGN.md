@@ -13,7 +13,8 @@ Lightweight markers for ammo, grenade refills, medical crates, stimms, health st
 ## Decisions
 - 2026-10-13 (user): name "Lightweight Strategical Markers"; mark ammo, grenades, medical crates, stimms, health stations and chests; performance first.
 - 2026-10-13 (user): "see through walls" is a setting, off by default.
-- 2026-10-13 (user): icons are the game's own interaction icons; where vanilla shares one icon, size and tint tell items apart (large ammo bigger and white, stimms in their case colours, chests gold).
+- 2026-10-13 (user): icons are the game's own interaction icons.
+- 2026-10-13 (user, option 1 of 2): markers copy vanilla's interaction marker at the 15 m hand-over (icon colour, frame textures and size at vanilla's distance scale 0.4; the larger point-of-interest frame for health stations), so the hand-over is seamless. This replaced the earlier tints and size bumps, so small and large ammo and plasteel and diamantine look alike, as in vanilla. Idols keep their own tint. Rejected: hiding vanilla's marker (extra hook, loses its tag and interaction visuals).
 - 2026-10-13 (user): at close range our marker yields to vanilla's interaction marker for the same unit.
 - 2026-10-13 (user): health station charges shown, empty stations dimmed, distance in metres (setting, on).
 - 2026-10-13 (user): a marker distance setting so players can see further: 40 m default, 10-200 m.
@@ -38,7 +39,7 @@ Lightweight markers for ammo, grenade refills, medical crates, stimms, health st
 - Setting changes flag every marker for removal; the next sweep rebuilds them with the new settings.
 
 ## Template
-- Passes: background, gold ring and icon as vanilla's interaction marker, a distance label and a charge count. One widget definition is cached and shared (`UIWidget.init` clones content, style and passes, `scripts/managers/ui/ui_widget.lua:14-33`).
+- Passes: background, ring and icon with vanilla's textures, colours and hand-over sizes (`marker_template.lua`, FRAMES), a distance label and a charge count. One widget definition is cached and shared (`UIWidget.init` clones content, style and passes, `scripts/managers/ui/ui_widget.lua:14-33`).
 - `on_enter` writes per-marker settings into the marker's own deep-copied template (`table.clone`, `scripts/foundation/utilities/table.lua:38-52`): position offset (0.8 m for pickups like vanilla's "pickup" visuals, 0 for chests and stations), max distance, line-of-sight check and edge fade (`easing_function` is required, `_get_fade` calls it unguarded).
 - `update_function` runs every frame for each live marker after `draw` is decided (`hud_element_world_markers.lua:461-474`, call at `:470`). It allocates nothing and reads no settings. Alpha = line of sight x empty-station dim x (1 - vanilla's alpha); at about zero it sets `draw = false` so the widget is not drawn. Distance text comes from a prebuilt table and changes only when the whole metre does.
 - Vanilla yield: vanilla's marker for the unit is found through `HudElementInteraction._interaction_units[unit].marker_id` (`scripts/ui/hud/elements/interaction/hud_element_interaction.lua:64-106`) and `_markers_by_id`; its alpha is its line-of-sight alpha times its distance fade unless tagged. While it is fully shown, ours is hidden and its line-of-sight check is off, so it takes no raycasts.
@@ -75,7 +76,7 @@ Lightweight markers for ammo, grenade refills, medical crates, stimms, health st
 
 ## Tests
 - `tools/luajit/luajit mods/active/LightweightStrategicalMarkers/tests/test_categories.lua` -> 2026-10-13: 61 pickups, 17 marked, 44 ignored, 3 interaction types, 0 failures.
-- `tools/luajit/luajit mods/active/LightweightStrategicalMarkers/tests/test_runtime.lua` -> 2026-10-13: 13672 checks, 0 failures (5 runs, identical).
+- `tools/luajit/luajit mods/active/LightweightStrategicalMarkers/tests/test_runtime.lua` -> 2026-10-13: 13676 checks, 0 failures (3 runs, identical).
 - `bash tools/validate.sh mods/active/LightweightStrategicalMarkers` -> 2026-10-13: LuaLS 0 diagnostics, LuaJIT parse passed. `tools\validate.ps1` not run.
 
 ## Runtime status

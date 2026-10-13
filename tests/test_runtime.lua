@@ -448,13 +448,20 @@ check(#element:ours() == 5, "five markers, got %d", #element:ours())
 local power_marker = element:marker_for(power)
 
 check(power_marker.widget.content.icon == ICONS .. "pocketable_syringe_power", "stimm uses the game's own icon")
-check(power_marker.widget.style.icon.color[2] == 240, "power stimm is tinted red")
+local icon_color = power_marker.widget.style.icon.color
+
+check(icon_color[2] == 216 and icon_color[3] == 237 and icon_color[4] == 190, "icons use vanilla's colour")
+check(math.abs(power_marker.widget.style.ring.size[1] - 38.4) < 1e-6, "ring matches vanilla at the hand-over distance")
+check(power_marker.widget.content.ring == "content/ui/materials/hud/interactions/frames/mission_top", "standard frame")
 check(element:marker_for(ammo).widget.content.icon == ICONS .. "ammunition", "pickup without an interactee icon falls back to the kind icon")
 check(element:marker_for(ammo).template.position_offset[3] == 0.8, "pickups float like vanilla")
 check(element:marker_for(chest).template.position_offset[3] == 0, "chests sit on their node")
 
 -- 2. Health station charges and dimming.
 local station_marker = element:marker_for(station)
+
+check(station_marker.widget.content.ring == "content/ui/materials/hud/interactions/frames/pickup_top", "station uses vanilla's point-of-interest frame")
+check(math.abs(station_marker.widget.style.ring.size[1] - 57.6) < 1e-6, "station ring matches vanilla's larger frame")
 
 check(station_marker.widget.content.count == "3", "station shows 3 charges, got %s", tostring(station_marker.widget.content.count))
 station_state.charges = 0
@@ -494,7 +501,7 @@ check(element:marker_for(far) ~= nil, "re-added at 44 m")
 local far_marker = element:marker_for(far)
 
 check(far_marker.draw == false, "beyond 40 m the marker exists but is not drawn")
-check(far_marker.widget.style.icon.size[1] > ammo_marker.widget.style.icon.size[1], "large ammo is bigger than small ammo")
+check(far_marker.widget.style.icon.size[1] == ammo_marker.widget.style.icon.size[1], "large ammo looks like vanilla's (same size as small)")
 
 -- 5. Opened chest: marker removed and never re-added.
 chest_state.open = true
@@ -687,7 +694,7 @@ hud._currently_visible_elements.HudElementWorldMarkers = true
 frames(2)
 check(#element:ours() == live, "markers rebuilt once the HUD is visible (%d, before %d)", #element:ours(), live)
 check(element:marker_for(hidden_pick) == nil, "item picked up while hidden has no marker")
-check(element:marker_for(power).widget.style.ring.size[1] == 72, "rebuilt with the new size, got %s", tostring(element:marker_for(power).widget.style.ring.size[1]))
+check(math.abs(element:marker_for(power).widget.style.ring.size[1] - 57.6) < 1e-6, "rebuilt with the new size, got %s", tostring(element:marker_for(power).widget.style.ring.size[1]))
 set_setting("marker_scale", 100)
 frames(2)
 

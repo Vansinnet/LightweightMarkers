@@ -6,15 +6,33 @@ local math_floor = math.floor
 local math_max = math.max
 local math_min = math.min
 
--- Matches vanilla's interaction marker at the 15 m hand-over distance (ring 96 and icon 48 at
--- scale 0.4, world_marker_template_interaction.lua), slightly enlarged to read at range.
-local RING_SIZE = 48
-local ICON_SIZE = 24
+-- Vanilla's interaction marker at the 15 m hand-over distance, where its distance scale is 0.4:
+-- "pickup"/"default" visuals ring and background 96, icon 48; "point_of_interest" ring 144,
+-- background 128, icon 72; same textures and colours as below
+-- (world_marker_template_interaction.lua, template sizes, template_visual_definitions, update_function).
+local HANDOVER_SCALE = 0.4
+local FRAMES = {
+    standard = {
+        background = "content/ui/materials/hud/interactions/frames/mission_back",
+        ring = "content/ui/materials/hud/interactions/frames/mission_top",
+        ring_size = 96 * HANDOVER_SCALE,
+        background_size = 96 * HANDOVER_SCALE,
+        icon_size = 48 * HANDOVER_SCALE,
+    },
+    point_of_interest = {
+        background = "content/ui/materials/hud/interactions/frames/pickup_back",
+        ring = "content/ui/materials/hud/interactions/frames/pickup_top",
+        ring_size = 144 * HANDOVER_SCALE,
+        background_size = 128 * HANDOVER_SCALE,
+        icon_size = 72 * HANDOVER_SCALE,
+    },
+}
+local RING_SIZE = FRAMES.standard.ring_size
+local ICON_SIZE = FRAMES.standard.icon_size
 local LABEL_FONT_SIZE = 15
 local COUNT_FONT_SIZE = 18
 -- Health station charges sit to the upper right of the ring.
-local COUNT_OFFSET_X = RING_SIZE * 0.5 + 6
-local COUNT_OFFSET_Y = RING_SIZE * 0.25
+local COUNT_GAP = 6
 local LINE_OF_SIGHT_SPEED = 8
 local EDGE_FADE = 5
 local MIN_ALPHA = 0.01
@@ -62,7 +80,8 @@ return function(ctx)
             {
                 pass_type = "texture",
                 style_id = "background",
-                value = "content/ui/materials/hud/interactions/frames/mission_back",
+                value_id = "background",
+                value = FRAMES.standard.background,
                 style = {
                     horizontal_alignment = "center",
                     vertical_alignment = "center",
@@ -74,7 +93,8 @@ return function(ctx)
             {
                 pass_type = "texture",
                 style_id = "ring",
-                value = "content/ui/materials/hud/interactions/frames/mission_top",
+                value_id = "ring",
+                value = FRAMES.standard.ring,
                 style = {
                     horizontal_alignment = "center",
                     vertical_alignment = "center",
@@ -131,7 +151,7 @@ return function(ctx)
                     text_horizontal_alignment = "center",
                     text_vertical_alignment = "center",
                     size = { 40, 24 },
-                    offset = { COUNT_OFFSET_X, -COUNT_OFFSET_Y, 4 },
+                    offset = { RING_SIZE * 0.5 + COUNT_GAP, -RING_SIZE * 0.25, 4 },
                     text_color = { 255, 255, 255, 255 },
                 },
                 visibility_function = function(content)
@@ -169,9 +189,14 @@ return function(ctx)
         local max_distance = config.max_distance
         local check_line_of_sight = not config.see_through_walls
 
-        scale_pass(style.background, RING_SIZE, scale)
-        scale_pass(style.ring, RING_SIZE, scale)
-        scale_pass(style.icon, ICON_SIZE, scale)
+        local frame = FRAMES[kind.frame] or FRAMES.standard
+        local ring_size = frame.ring_size * scale
+
+        content.background = frame.background
+        content.ring = frame.ring
+        scale_pass(style.background, frame.background_size, scale)
+        scale_pass(style.ring, frame.ring_size, scale)
+        scale_pass(style.icon, frame.icon_size, scale)
 
         local icon_color = style.icon.color
         local color = kind.color
@@ -181,13 +206,13 @@ return function(ctx)
         local label = style.label
 
         label.font_size = LABEL_FONT_SIZE * config.marker_scale
-        label.offset[2] = RING_SIZE * 0.5 * scale
+        label.offset[2] = ring_size * 0.5
 
         local count = style.count
 
         count.font_size = COUNT_FONT_SIZE * config.marker_scale
-        count.offset[1] = COUNT_OFFSET_X * scale
-        count.offset[2] = -COUNT_OFFSET_Y * scale
+        count.offset[1] = ring_size * 0.5 + COUNT_GAP * config.marker_scale
+        count.offset[2] = -ring_size * 0.25
 
         content.icon = marker.data.icon
         content.label = nil
