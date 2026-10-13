@@ -109,10 +109,11 @@ end
 -- Vanilla's interaction marker sets its icon colour only when its visual type changes, for example
 -- on tagging (world_marker_template_interaction.lua, setup_marker_by_interaction_type). After each of
 -- its updates a tracked item with its own colour gets that colour back, so it looks the same at every
--- distance. Markers clone the template when added, so they all carry the hooked function.
-local InteractionMarkerTemplate = require("scripts/ui/hud/elements/world_markers/templates/world_marker_template_interaction")
-
-mod:hook_safe(InteractionMarkerTemplate, "update_function", function(_, _, widget, marker)
+-- distance. Each marker has its own template copy (hud_element_world_markers.lua,
+-- _template_by_type), so the update is wrapped per marker with a plain call instead of a DMF hook,
+-- which would allocate and xpcall every frame for every interaction marker.
+local function recolored_update(parent, ui_renderer, widget, marker, template, dt, t)
+    local animating = marker.lsm_vanilla_update(parent, ui_renderer, widget, marker, template, dt, t)
     local i = index_of[marker.unit]
     local kind = i and kinds[i]
 
@@ -121,6 +122,53 @@ mod:hook_safe(InteractionMarkerTemplate, "update_function", function(_, _, widge
         local color = kind.color
 
         icon_color[1], icon_color[2], icon_color[3], icon_color[4] = color[1], color[2], color[3], color[4]
+    end
+
+    return animating
+end
+
+local function wrap_vanilla(marker)
+    local template = marker.template
+
+    if template.update_function ~= recolored_update then
+        marker.lsm_vanilla_update = template.update_function
+        template.update_function = recolored_update
+    end
+end
+
+local function unwrap_vanilla(element)
+    local markers = element and element._markers_by_type.interaction
+
+    if markers then
+        for i = 1, #markers do
+            local marker = markers[i]
+            local template = marker.template
+
+            if template.update_function == recolored_update then
+                template.update_function = marker.lsm_vanilla_update
+            end
+        end
+    end
+end
+
+local function wrap_all_vanilla(element)
+    local markers = element._markers_by_type.interaction
+
+    if markers then
+        for i = 1, #markers do
+            wrap_vanilla(markers[i])
+        end
+    end
+end
+
+-- The marker was just registered under the newest id (_register_marker).
+mod:hook_safe("HudElementWorldMarkers", "event_add_world_marker_unit", function(self, marker_type)
+    if marker_type == "interaction" then
+        local marker = self._markers_by_id[self._id_counter]
+
+        if marker then
+            wrap_vanilla(marker)
+        end
     end
 end)
 
@@ -439,6 +487,7 @@ mod.on_enabled = function()
 
     if element then
         register(element)
+        wrap_all_vanilla(element)
     end
 
     sweep_timer = SWEEP_INTERVAL
@@ -448,6 +497,7 @@ end
 mod.on_disabled = function()
     mod.update = nil
     remove_all_markers()
+    unwrap_vanilla(state.element)
     unregister()
     clear_registry()
 end
@@ -460,6 +510,7 @@ mod.on_unload = function(exit_game)
     end
 
     remove_all_markers()
+    unwrap_vanilla(state.element)
     unregister()
     clear_registry()
 end

@@ -89,12 +89,6 @@ package.preload["scripts/managers/ui/ui_widget"] = function()
     }
 end
 
-local InteractionMarkerTemplate = { name = "interaction" }
-
-package.preload["scripts/ui/hud/elements/world_markers/templates/world_marker_template_interaction"] = function()
-    return InteractionMarkerTemplate
-end
-
 -- Fake HUD ---------------------------------------------------------------------------------------
 
 local TEMPLATE_NAME = "LightweightStrategicalMarkers_marker"
@@ -108,6 +102,7 @@ local function new_element(hud)
         _marker_templates = {},
         _markers = {},
         _markers_by_id = {},
+        _markers_by_type = {},
         _widgets_by_name = {},
         _id_counter = 0,
         camera = { pos = { 0, 0, 0 } },
@@ -334,10 +329,6 @@ local mod = {
         return dofile(MODS .. path .. ".lua")
     end,
     hook_safe = function(_, target, method, handler)
-        if type(target) == "table" then
-            target = target.name
-        end
-
         hooks[target .. "." .. method] = handler
     end,
 }
@@ -466,10 +457,30 @@ local ammo_color = element:marker_for(ammo).widget.style.icon.color
 check(ammo_color[2] == 216 and ammo_color[3] == 237 and ammo_color[4] == 190, "ammo uses vanilla's colour")
 
 -- Vanilla's interaction marker takes the item's colour after its own update; other items keep vanilla's.
-local function vanilla_icon_color(unit)
-    local widget = { style = { icon = { color = { 255, 216, 237, 190 } } } }
+local function vanilla_update()
+    return true
+end
 
-    hooks["interaction.update_function"](element, nil, widget, { unit = unit })
+local function add_vanilla_marker(unit)
+    element._id_counter = element._id_counter + 1
+
+    local marker = { id = element._id_counter, type = "interaction", unit = unit, template = { update_function = vanilla_update } }
+    local by_type = element._markers_by_type.interaction or {}
+
+    element._markers_by_type.interaction = by_type
+    by_type[#by_type + 1] = marker
+    element._markers_by_id[marker.id] = marker
+    hooks["HudElementWorldMarkers.event_add_world_marker_unit"](element, "interaction", unit)
+
+    return marker
+end
+
+local function vanilla_icon_color(unit)
+    local marker = add_vanilla_marker(unit)
+    local widget = { style = { icon = { color = { 255, 216, 237, 190 } } } }
+    local template = marker.template
+
+    check(template.update_function(element, nil, widget, marker, template) == true, "wrapped vanilla update keeps its return value")
 
     return widget.style.icon.color
 end
@@ -630,9 +641,13 @@ frames(1)
 check(#element:ours() == 0, "no markers while disabled")
 check(element._marker_templates[TEMPLATE_NAME] == nil, "template removed while disabled")
 check(mod.update == nil, "no update while disabled")
+local vanilla_markers = element._markers_by_type.interaction
+
+check(#vanilla_markers > 0 and vanilla_markers[1].template.update_function == vanilla_update, "vanilla update restored while disabled")
 mod.on_enabled(false)
 frames(1)
 check(#element:ours() == live_before, "markers back after enabling (%d, before %d)", #element:ours(), live_before)
+check(vanilla_markers[1].template.update_function ~= vanilla_update, "vanilla update wrapped again after enabling")
 
 -- 12. New HUD: ids of the old HUD are forgotten, markers are rebuilt in the new one.
 hooks["HudElementWorldMarkers.destroy"](element)
