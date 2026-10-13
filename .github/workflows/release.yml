@@ -39,6 +39,7 @@ concurrency:
 
 env:
   MOD_NAME: "LightweightMarkers"
+  NEXUS_MOD_ID: "1450"
 
 jobs:
   release:
@@ -251,3 +252,13 @@ jobs:
             --title "$MOD_NAME $VERSION" --notes-file body.md --generate-notes "$flag"
           echo "created=true" >> "$GITHUB_OUTPUT"
           echo "Published $TAG with $MOD_NAME.zip SHA-256 $hash"
+
+  # A release created with the workflow token does not trigger the release
+  # event, so the Nexus upload is called directly.
+  nexus:
+    needs: release
+    if: ${{ needs.release.outputs.created == 'true' && needs.release.outputs.prerelease == 'false' }}
+    uses: ./.github/workflows/nexus-release.yml
+    with:
+      tag: ${{ needs.release.outputs.tag }}
+    secrets: inherit
