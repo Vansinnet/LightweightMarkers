@@ -1,0 +1,53 @@
+# Updates the Nexus Mods page description from NEXUS_DESCRIPTION.bbcode.
+# Runs by hand (workflow_dispatch) or when that file changes on main.
+# Uses Nexus API v3 PATCH /mods/{id} (marked Experimental by Nexus).
+# Repository secret NEXUSMODS_APIKEY holds the personal Nexus API key.
+
+name: Update Nexus description
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [NEXUS_DESCRIPTION.bbcode]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nexus-description
+  cancel-in-progress: false
+
+env:
+  NEXUS_GAME: "warhammer40kdarktide"
+  NEXUS_MOD_ID: "1450"
+
+jobs:
+  description:
+    runs-on: ubuntu-latest
+    environment: nexus
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update description
+        env:
+          NEXUS_API_KEY: ${{ secrets.NEXUSMODS_APIKEY }}
+        run: |
+          set -euo pipefail
+          : "${NEXUS_API_KEY:?Set repository secret NEXUSMODS_APIKEY}"
+          [ -s NEXUS_DESCRIPTION.bbcode ] || { echo "NEXUS_DESCRIPTION.bbcode is empty." >&2; exit 1; }
+
+          mod_id="$(curl -sSf -H "apikey: $NEXUS_API_KEY" \
+            "https://api.nexusmods.com/v3/games/$NEXUS_GAME/mods/$NEXUS_MOD_ID" | jq -r '.data.id')"
+          [ -n "$mod_id" ] && [ "$mod_id" != "null" ] || { echo "No global Nexus mod id." >&2; exit 1; }
+
+          jq -n --rawfile d NEXUS_DESCRIPTION.bbcode '{description: $d}' > body.json
+          status="$(curl -sS -o response.json -w '%{http_code}' -X PATCH \
+            -H "apikey: $NEXUS_API_KEY" -H "content-type: application/json" \
+            --data @body.json "https://api.nexusmods.com/v3/mods/$mod_id")"
+          if [ "$status" != "204" ]; then
+            echo "Nexus answered HTTP $status:" >&2
+            cat response.json >&2 || true
+            exit 1
+          fi
+          echo "Updated the description of Nexus mod $NEXUS_MOD_ID ($mod_id)."
