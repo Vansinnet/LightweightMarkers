@@ -6,7 +6,7 @@
 -- unregisters markers flagged `remove` or whose unit died, calling on_exit). Engine natives are
 -- plain-table stand-ins, so this proves the mod's own logic only, never an engine contract.
 -- Run from the workspace root:
---   tools/luajit/luajit mods/active/LightweightStrategicalMarkers/tests/test_runtime.lua
+--   tools/luajit/luajit mods/active/LightweightMarkers/tests/test_runtime.lua
 
 local MODS = "mods/active/"
 
@@ -91,7 +91,7 @@ end
 
 -- Fake HUD ---------------------------------------------------------------------------------------
 
-local TEMPLATE_NAME = "LightweightStrategicalMarkers_marker"
+local TEMPLATE_NAME = "LightweightMarkers_marker"
 local Element = {}
 
 Element.__index = Element
@@ -326,7 +326,7 @@ local hooks = {}
 
 local mod = {
     get_name = function()
-        return "LightweightStrategicalMarkers"
+        return "LightweightMarkers"
     end,
     get = function(_, id)
         return settings[id]
@@ -343,7 +343,7 @@ get_mod = function()
     return mod
 end
 
-dofile(MODS .. "LightweightStrategicalMarkers/scripts/mods/LightweightStrategicalMarkers/LightweightStrategicalMarkers.lua")
+dofile(MODS .. "LightweightMarkers/scripts/mods/LightweightMarkers/LightweightMarkers.lua")
 
 local function set_setting(id, value)
     settings[id] = value

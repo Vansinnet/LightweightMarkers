@@ -1,8 +1,8 @@
 -- Offline check of the classification table against the game's own pickup and interaction
 -- settings, and of the options against the localization. Run from the workspace root:
---   tools/luajit/luajit mods/active/LightweightStrategicalMarkers/tests/test_categories.lua
+--   tools/luajit/luajit mods/active/LightweightMarkers/tests/test_categories.lua
 
-local MOD_DIR = "mods/active/LightweightStrategicalMarkers/scripts/mods/LightweightStrategicalMarkers/"
+local MOD_DIR = "mods/active/LightweightMarkers/scripts/mods/LightweightMarkers/"
 
 package.path = "darktide-source/?.lua;" .. package.path
 
@@ -167,7 +167,7 @@ end
 
 -- Options and localization: every widget has a title and tooltip, every group setting is a
 -- widget, and localized strings survive string.format as DMF's mod:localize applies it.
-local localization = dofile(MOD_DIR .. "LightweightStrategicalMarkers_localization.lua")
+local localization = dofile(MOD_DIR .. "LightweightMarkers_localization.lua")
 
 get_mod = function()
     return {
@@ -177,7 +177,7 @@ get_mod = function()
     }
 end
 
-local data = dofile(MOD_DIR .. "LightweightStrategicalMarkers_data.lua")
+local data = dofile(MOD_DIR .. "LightweightMarkers_data.lua")
 local widget_ids = {}
 
 local function check_widgets(widgets)

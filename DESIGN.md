@@ -1,17 +1,18 @@
-# LightweightStrategicalMarkers: design
-Status 2026-10-13: 1.0.0 released on GitHub, ModID `LightweightStrategicalMarkers`. Verified: static and offline (`tests/`); independent source review 2026-10-13; all features confirmed in game by the user 2026-10-13. Tagging through our markers and item colours (new in 1.0.0) confirmed in game by the user 2026-10-13.
+# LightweightMarkers: design
+Status 2026-10-13: 1.0.0 released on GitHub as LightweightStrategicalMarkers; renamed to Lightweight Markers since (unreleased), ModID `LightweightMarkers`. Verified: static and offline (`tests/`); independent source review 2026-10-13; all features confirmed in game by the user 2026-10-13. Tagging through our markers and item colours (new in 1.0.0) confirmed in game by the user 2026-10-13.
 
 Lightweight markers for ammo, grenade refills, medical crates, stimms, health stations and chests, built as a lean alternative to Markers Improved AIO (`referensmoddar/markers_aio`).
 
 ## Files
-- `LightweightStrategicalMarkers.lua`: settings snapshot, discovery hook and seed, registry, 4 Hz sweep, HUD registration, lifecycle.
+- `LightweightMarkers.lua`: settings snapshot, discovery hook and seed, registry, 4 Hz sweep, HUD registration, lifecycle.
 - `marker_template.lua`: the world-marker template (factory taking the shared config and state): visuals in `on_enter`, alpha and distance text in `update_function`, widget release in `on_exit`.
 - `categories.lua`: pure data: pickup type and interaction type to kind, kind visuals, group settings.
-- `LightweightStrategicalMarkers_data.lua`, `_localization.lua`: options and English text.
+- `LightweightMarkers_data.lua`, `_localization.lua`: options and English text.
 - `tests/`: offline harnesses (`tests/README.md`).
 
 ## Decisions
 - 2026-10-13 (user): name "Lightweight Strategical Markers"; mark ammo, grenades, medical crates, stimms, health stations and chests; performance first.
+- 2026-10-13 (user): renamed to "Lightweight Markers": ModID, folder, files and repository `LightweightMarkers`. The ModID is the DMF settings key, so settings from 0.99.0 and 1.0.0 do not carry over, and players replace the old folder and its `mod_load_order.txt` line.
 - 2026-10-13 (user): "see through walls" is a setting, off by default.
 - 2026-10-13 (user): icons are the game's own interaction icons.
 - 2026-10-13 (user, option 1 of 2): markers copy vanilla's interaction marker at the 15 m hand-over (icon colour, frame textures and size at vanilla's distance scale 0.4; the larger point-of-interest frame for health stations), so the hand-over is seamless. This replaced the earlier tints and size bumps, so small and large ammo and plasteel and diamantine look alike, as in vanilla. Idols keep their own tint. Rejected: hiding vanilla's marker (extra hook, loses its tag and interaction visuals).
@@ -82,13 +83,13 @@ Lightweight markers for ammo, grenade refills, medical crates, stimms, health st
 | DMF events, hooks, lifecycle | `dmf-source/scripts/mods/dmf/modules/core/events.lua:11-70`, `hooks.lua:181-185,318-333`, `toggling.lua:10-22`, `dmf_loader.lua:89-98` |
 
 ## Tests
-- `tools/luajit/luajit mods/active/LightweightStrategicalMarkers/tests/test_categories.lua` -> 2026-10-13: 61 pickups, 17 marked, 44 ignored, 3 interaction types, 0 failures.
-- `tools/luajit/luajit mods/active/LightweightStrategicalMarkers/tests/test_runtime.lua` -> 2026-10-13: 13692 checks, 0 failures.
-- `tools\validate.ps1 mods\active\LightweightStrategicalMarkers` -> 2026-10-13: LuaLS 0 diagnostics, LuaJIT load passed.
+- `tools/luajit/luajit mods/active/LightweightMarkers/tests/test_categories.lua` -> 2026-10-13: 61 pickups, 17 marked, 44 ignored, 3 interaction types, 0 failures.
+- `tools/luajit/luajit mods/active/LightweightMarkers/tests/test_runtime.lua` -> 2026-10-13: 13692 checks, 0 failures.
+- `tools\validate.ps1 mods\active\LightweightMarkers` -> 2026-10-13: LuaLS 0 diagnostics, LuaJIT load passed.
 
 ## Runtime status
 Smallest in-game test:
-1. Enable Lightweight Strategical Markers; turn off Markers Improved AIO's matching categories or disable it. Restart the game (first install).
+1. Enable Lightweight Markers; turn off Markers Improved AIO's matching categories or disable it. Restart the game (first install).
 2. Start a low-difficulty mission. Expected: markers on ammo, grenades, medical crates, stimms, health stations and chests within 40 m, only for items in line of sight, without distance text ("Show distance" is off by default).
 3. Walk up to a pickup. Expected: at about 15 m the marker hands over to the game's own marker; never two icons on one item.
 4. Options: turn on "See markers through walls". Expected: items behind walls get markers. Set "Marker distance" to 150. Expected: far items appear. Turn on "Show distance". Expected: distance in metres appears below the markers.

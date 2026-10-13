@@ -1,4 +1,4 @@
-# LightweightStrategicalMarkers offline tests
+# LightweightMarkers offline tests
 
 Run from the workspace root with the bundled LuaJIT. Both are offline evidence only, not in-game results.
 
@@ -9,8 +9,8 @@ Run from the workspace root with the bundled LuaJIT. Both are offline evidence o
 
 Commands:
 
-    tools/luajit/luajit mods/active/LightweightStrategicalMarkers/tests/test_categories.lua
-    tools/luajit/luajit mods/active/LightweightStrategicalMarkers/tests/test_runtime.lua
+    tools/luajit/luajit mods/active/LightweightMarkers/tests/test_categories.lua
+    tools/luajit/luajit mods/active/LightweightMarkers/tests/test_runtime.lua
 
 Last results (2026-10-13, Linux bundled LuaJIT, Darktide source 1.13.1):
 

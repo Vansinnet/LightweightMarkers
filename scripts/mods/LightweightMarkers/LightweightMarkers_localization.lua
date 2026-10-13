@@ -1,5 +1,5 @@
 return {
-    mod_name = { en = "Lightweight Strategical Markers" },
+    mod_name = { en = "Lightweight Markers" },
     mod_description = {
         en = "Lightweight markers for ammo, grenades, medical crates, stimms, health stations and chests, and optionally crafting materials, grimoires, scriptures and heretical idols.",
     },
