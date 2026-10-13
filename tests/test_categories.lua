@@ -45,8 +45,8 @@ local IGNORED = {
     "live_event_leftover_01_pickup_large", "live_event_saints_01_pickup_small",
     "live_event_saints_01_pickup_medium", "live_event_saints_01_pickup_large",
     -- Luggables.
-    "battery_01_luggable", "battery_02_luggable", "container_01_luggable", "container_02_luggable",
-    "container_03_luggable", "control_rod_01_luggable", "prismata_case_01_luggable",
+    "battery_01_luggable", "battery_02_luggable",
+    "control_rod_01_luggable", "prismata_case_01_luggable",
     "expedition_explosive_luggable_01",
     -- Expedition-only items (the large ammo crate is marked).
     "expedition_currency_small_tier_1", "expedition_currency_small_tier_2",

@@ -33,6 +33,10 @@ return {
     show_plasteel_tooltip = { en = "Plasteel crafting material." },
     show_diamantine = { en = "Diamantine" },
     show_diamantine_tooltip = { en = "Diamantine crafting material." },
+    show_containers = { en = "Mission containers" },
+    show_containers_tooltip = {
+        en = "Containers you carry to a drop-off point in some missions. Hidden while carried or delivered.",
+    },
     show_grimoires = { en = "Grimoires" },
     show_grimoires_tooltip = { en = "Grimoires for the side mission." },
     show_scriptures = { en = "Scriptures" },
