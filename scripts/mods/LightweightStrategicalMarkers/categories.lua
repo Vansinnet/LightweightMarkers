@@ -27,30 +27,33 @@ end
 -- `icon` is vanilla's icon for that item: the pickup's interaction_icon, else its interaction
 -- template's icon. At runtime the interactee's own interaction_icon() wins, so a level override
 -- (for example on a chest) also matches vanilla.
+-- Every kind looks like vanilla's interaction marker for it at the hand-over distance (same icon,
+-- colour, frame and size), so the switch to vanilla's marker up close is invisible. Only heretical
+-- idols, which vanilla never marks, have their own look.
 local kinds = {
-    -- Small and large ammo share vanilla's icon; the large one is bigger and white.
     ammo_small = kind("ammo", "ammunition"),
-    ammo_large = kind("ammo", "ammunition", { 255, 255, 255, 255 }, 1.25),
+    ammo_large = kind("ammo", "ammunition"),
     ammo_crate = kind("ammo", "pocketable_ammo"),
     grenade = kind("grenades", "grenade"),
     medical_crate = kind("medical", "pocketable_medkit"),
-    -- Stimm colours follow the syringe case lights (scripts/components/syringe_case_color.lua).
-    stimm_medical = kind("stimms", "pocketable_syringe_corruption", { 255, 80, 230, 70 }),
-    stimm_power = kind("stimms", "pocketable_syringe_power", { 255, 240, 80, 55 }),
-    stimm_speed = kind("stimms", "pocketable_syringe_speed", { 255, 60, 165, 255 }),
-    stimm_concentration = kind("stimms", "pocketable_syringe_ability", { 255, 255, 215, 40 }),
+    stimm_medical = kind("stimms", "pocketable_syringe_corruption"),
+    stimm_power = kind("stimms", "pocketable_syringe_power"),
+    stimm_speed = kind("stimms", "pocketable_syringe_speed"),
+    stimm_concentration = kind("stimms", "pocketable_syringe_ability"),
     health_station = kind("health_stations", "respawn", nil, nil, NO_OFFSET),
-    chest = kind("chests", "default", { 255, 226, 199, 126 }, nil, NO_OFFSET),
-    -- Off by default. Materials share vanilla's icon; tint tells the material, size the amount.
-    plasteel_small = kind("plasteel", "environment_generic", { 255, 190, 200, 205 }),
-    plasteel_large = kind("plasteel", "environment_generic", { 255, 190, 200, 205 }, 1.25),
-    diamantine_small = kind("diamantine", "environment_generic", { 255, 110, 195, 255 }),
-    diamantine_large = kind("diamantine", "environment_generic", { 255, 110, 195, 255 }, 1.25),
-    grimoire = kind("grimoires", "pocketable_default", { 255, 175, 95, 255 }),
-    scripture = kind("scriptures", "pocketable_default", { 255, 240, 210, 120 }),
+    chest = kind("chests", "default", nil, nil, NO_OFFSET),
+    plasteel_small = kind("plasteel", "environment_generic"),
+    plasteel_large = kind("plasteel", "environment_generic"),
+    diamantine_small = kind("diamantine", "environment_generic"),
+    diamantine_large = kind("diamantine", "environment_generic"),
+    grimoire = kind("grimoires", "pocketable_default"),
+    scripture = kind("scriptures", "pocketable_default"),
     -- Vanilla shows no marker on idols; this is the game's priority-target icon.
     heretical_idol = kind("heretical_idols", "enemy_priority", { 255, 220, 70, 150 }, nil, IDOL_OFFSET),
 }
+
+-- Health stations use vanilla's larger "point_of_interest" frame; everything else the standard one.
+kinds.health_station.frame = "point_of_interest"
 
 kinds.health_station.charges = true
 kinds.chest.chest = true

@@ -13,21 +13,18 @@ It is built to cost as little as possible:
 
 | Item | Icon | Notes |
 | --- | --- | --- |
-| Small ammo | The game's ammo icon | |
-| Large ammo | The game's ammo icon | Larger and white |
+| Small and large ammo | The game's ammo icon | |
 | Ammo crates | The game's ammo crate icon | Carried and deployed crates, and expedition ammo crates |
 | Grenade refills | The game's grenade icon | |
 | Medical crates | The game's medical crate icon | Carried and deployed crates |
-| Stimms | The game's stimm icons | Tinted like the stimm cases: green medical, red power, blue speed, yellow concentration |
+| Stimms | The game's stimm icons | |
 | Health stations | The game's health station icon | Remaining charges; dimmed when empty |
-| Chests | The game's chest icon | Gold; removed once the chest is opened |
-| Plasteel (off by default) | The game's material icon | Steel grey; large amounts bigger |
-| Diamantine (off by default) | The game's material icon | Blue; large amounts bigger |
-| Grimoires (off by default) | The game's side-mission item icon | Purple |
-| Scriptures (off by default) | The game's side-mission item icon | Gold |
+| Chests | The game's chest icon | Removed once the chest is opened |
+| Plasteel and diamantine (off by default) | The game's material icon | |
+| Grimoires and scriptures (off by default) | The game's side-mission item icon | |
 | Heretical idols (off by default) | The game's priority-target icon | Only the idols the mission actually uses; removed once destroyed |
 
-Within about 15 m the game shows its own marker for the same item. This mod's marker then fades out, so there is never a double icon, and tags and the interaction prompt look as usual.
+Within about 15 m the game shows its own marker for the same item. This mod's marker then fades out, so there is never a double icon, and tags and the interaction prompt look as usual. Markers use the game's colour, frame and size at that distance, so the hand-over is not visible. Like the game's own markers, small and large amounts of the same item look alike.
 
 ## Settings
 
