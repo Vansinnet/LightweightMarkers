@@ -1,4 +1,4 @@
-local mod = get_mod("LightweightStrategicalMarkers")
+local mod = get_mod("LightweightMarkers")
 
 local function checkbox(id, default_value)
     return {

@@ -1,6 +1,6 @@
-local mod = get_mod("LightweightStrategicalMarkers")
+local mod = get_mod("LightweightMarkers")
 
-local PATH = "LightweightStrategicalMarkers/scripts/mods/LightweightStrategicalMarkers/"
+local PATH = "LightweightMarkers/scripts/mods/LightweightMarkers/"
 
 local function load(name)
     local chunk = mod:io_dofile(PATH .. name)
