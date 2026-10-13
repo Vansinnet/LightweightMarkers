@@ -33,13 +33,9 @@ return {
     show_plasteel_tooltip = { en = "Plasteel crafting material." },
     show_diamantine = { en = "Diamantine" },
     show_diamantine_tooltip = { en = "Diamantine crafting material." },
-    show_containers = { en = "Mission containers" },
-    show_containers_tooltip = {
-        en = "Marks the large containers that some missions ask you to carry with both hands to a drop-off point, such as sample containers. Power cells are a separate option. A container's marker is hidden while someone carries it and once it is delivered.",
-    },
-    show_power_cells = { en = "Power cells" },
-    show_power_cells_tooltip = {
-        en = "Marks the power cells you carry with both hands and plug into a medicae station to power it. They are often hidden away from the station. Some missions use the same power cells for objectives; those are marked too. A cell's marker is hidden while someone carries it and while it is plugged in.",
+    show_carry_items = { en = "Power cells and containers" },
+    show_carry_items_tooltip = {
+        en = "Marks the items you carry with both hands and put in place:\n- Power cells for medicae stations, often hidden away from the station. Some missions use the same power cells for objectives; those are marked too.\n- Containers that some missions ask you to carry to a drop-off point, such as sample containers.\nA marker is hidden while someone carries the item and once it is plugged in or delivered.",
     },
     show_grimoires = { en = "Grimoires" },
     show_grimoires_tooltip = { en = "Grimoires for the side mission." },
