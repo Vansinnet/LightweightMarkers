@@ -257,6 +257,7 @@ function hud:element(name)
 end
 
 local interactee_map = {}
+local destructible_map = {}
 
 Managers = {
     state = {
@@ -266,6 +267,12 @@ Managers = {
                     return {
                         unit_to_extension_map = function()
                             return interactee_map
+                        end,
+                    }
+                elseif name == "destructible_system" then
+                    return {
+                        unit_to_extension_map = function()
+                            return destructible_map
                         end,
                     }
                 end
@@ -301,6 +308,11 @@ local settings = {
     show_stimms = true,
     show_health_stations = true,
     show_chests = true,
+    show_plasteel = false,
+    show_diamantine = false,
+    show_grimoires = false,
+    show_scriptures = false,
+    show_heretical_idols = false,
 }
 
 local hooks = {}
@@ -593,6 +605,70 @@ element = new_hud()
 frames(1)
 check(#element:ours() == live_before, "markers rebuilt in a new HUD (%d)", #element:ours())
 check(#old_element:ours() == live_before, "old HUD untouched (it is destroyed by the game)")
+
+-- 12b. Collectibles: off by default, tracked only once turned on.
+local small_metal = spawn(6, "forge_material", { pickup_type = "small_metal" }, {}, ICONS .. "environment_generic")
+local tome = spawn(7, "pocketable", { pickup_type = "tome" }, {}, ICONS .. "pocketable_default")
+
+-- Idols: the CollectiblesManager hands the picked idol its data; a candidate it did not pick has
+-- component data without `id`.
+local function spawn_idol(x, picked)
+    local unit = new_unit(x)
+    local destructible = { _unit = unit, _destruction_info = { current_stage_index = 1 } }
+
+    unit.extensions.destructible_system = destructible
+    destructible_map[unit] = destructible
+    destructible._collectible_data = { name = "idol", section_id = 1, unit = unit }
+
+    if picked then
+        local data = { name = "idol", section_id = 1, unit = unit, id = 1 }
+
+        hooks["DestructibleExtension.set_collectible_data"](destructible, data)
+        destructible._collectible_data = data
+    end
+
+    return unit, destructible
+end
+
+local idol, idol_destructible = spawn_idol(9, true)
+local hidden_idol = spawn_idol(11, false)
+
+frames(2)
+check(element:marker_for(small_metal) == nil, "plasteel off by default")
+check(element:marker_for(tome) == nil, "scriptures off by default")
+check(element:marker_for(idol) == nil, "idols off by default")
+set_setting("show_plasteel", true)
+set_setting("show_scriptures", true)
+set_setting("show_heretical_idols", true)
+frames(2)
+check(element:marker_for(small_metal) ~= nil, "plasteel shown once turned on")
+check(element:marker_for(tome) ~= nil, "scripture shown once turned on")
+check(element:marker_for(idol) ~= nil, "picked idol shown once turned on")
+check(element:marker_for(hidden_idol) == nil, "idol candidate the game did not pick has no marker")
+check(element:marker_for(idol).widget.content.icon == ICONS .. "enemy_priority", "idol icon")
+check(element:marker_for(idol).template.position_offset[3] == 0.5, "idol marker floats above its base")
+idol_destructible._destruction_info.current_stage_index = 0
+frames(2)
+check(element:marker_for(idol) == nil, "destroyed idol has no marker")
+idol_destructible._destruction_info.current_stage_index = 1
+frames(2)
+check(element:marker_for(idol) == nil, "destroyed idol leaves the registry")
+idol_destructible._destruction_info.current_stage_index = 0
+
+local new_idol = spawn_idol(13, true)
+
+frames(2)
+check(element:marker_for(new_idol) ~= nil, "idol picked while the group is on is tracked by the hook")
+set_setting("show_plasteel", false)
+set_setting("show_scriptures", false)
+set_setting("show_heretical_idols", false)
+frames(2)
+check(element:marker_for(small_metal) == nil and element:marker_for(new_idol) == nil, "collectibles off again")
+despawn(small_metal)
+despawn(tome)
+ALIVE[new_idol] = nil
+destructible_map[new_idol] = nil
+frames(2)
 
 -- 13. While the HUD does not update (menu open, dead), nothing is added or rebuilt, and
 -- picked-up items still leave the registry.

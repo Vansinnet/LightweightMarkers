@@ -1,5 +1,5 @@
 # LightweightStrategicalMarkers: design
-Status 2026-10-13: 1.0.0 (unreleased), ModID `LightweightStrategicalMarkers`. Verified: static (LuaLS, LuaJIT parse) and offline (`tests/`); independent source review 2026-10-13. Not yet run in game.
+Status 2026-10-13: 1.0.0 (unreleased), ModID `LightweightStrategicalMarkers`. Verified: static and offline (`tests/`); independent source review 2026-10-13; base markers confirmed in game by the user 2026-10-13, collectibles not yet.
 
 Lightweight markers for ammo, grenade refills, medical crates, stimms, health stations and chests, built as a lean alternative to Markers Improved AIO (`referensmoddar/markers_aio`).
 
@@ -17,13 +17,16 @@ Lightweight markers for ammo, grenade refills, medical crates, stimms, health st
 - 2026-10-13 (user): at close range our marker yields to vanilla's interaction marker for the same unit.
 - 2026-10-13 (user): health station charges shown, empty stations dimmed, distance in metres (setting, on).
 - 2026-10-13 (user): a marker distance setting so players can see further: 40 m default, 10-200 m.
-- 2026-10-13: not marked in 1.0.0: tomes, grimoires, crafting materials, luggables, expedition-only pickups except the large ammo crate, chest contents. The ignore list in `tests/test_categories.lua` names each.
+- 2026-10-13 (user): plasteel, diamantine, grimoires, scriptures and heretical idols as options, off by default, as light as possible.
+- 2026-10-13 (user, answered): chest contents cannot be shown online. Reserved items are decided on the server at mission start and never sent; the rest is rolled on opening from the team's needs (`pickup_system.lua`, `_populate_pickups`, `get_rubberband_pickup`). Only possible when the local machine is the server (Psykanium, SoloPlay); not built.
+- 2026-10-13: not marked: luggables, expedition-only pickups except the large ammo crate, live-event items (including the nurgle totem Markers AIO lists under idols). The ignore list in `tests/test_categories.lua` names each pickup.
 
 ## Discovery
 - `hook_safe` on `InteracteeExtension.set_interaction_context` (`scripts/extension_systems/interaction/interactee_extension.lua:99`). Spawned units reach it from `init` (`:47`): on a client the pickup husk already carries unit data `pickup_type` (`scripts/extension_systems/unit_templates/pickup_unit_template.lua:172`; extensions are created after `husk_init` returns, `scripts/foundation/managers/extension/extension_manager.lua:170-175`). Level chests and health stations reach it from the `Interactable` component (`scripts/components/interactable.lua:76`), which runs on clients too.
 - Classification is one table lookup (`categories.lua`): a pickup by its pickup type only, anything else by interaction type. `deployable_marker` is used only by the deployed medical crate (`medical_crate_deployable_unit_template.lua:6-13`).
 - On enable and hot reload the registry is seeded once from `interactee_system:unit_to_extension_map()`, reading every interaction type the unit was given (`_interactions`), since a chest that starts inactive has no active type.
-- Registry: dense arrays with swap-remove plus unit to index.
+- Registry: dense arrays with swap-remove plus unit to index. Only groups that are on are tracked; a settings change reseeds, so turned-off groups cost nothing.
+- Heretical idols are destructibles, not interactables. `CollectiblesManager.on_gameplay_post_init` runs on every peer, picks one idol per section from the level seed and calls `DestructibleExtension:set_collectible_data` with a clone that has `id = 1` (`scripts/managers/collectibles/collectibles_manager.lua:28-66`; called from `gameplay_init_step_pacing.lua:20` without a server check). A `hook_safe` there tracks the idol; the seed takes destructibles whose `_collectible_data` has an `id`. Unpicked candidates keep component data without `id` and stay hidden. An idol is finished when its `_destruction_info.current_stage_index` is 0, which clients get through `rpc_destructible_last_destruction` (`destructible_extension.lua:338-395`).
 
 ## Markers near the player
 - `mod.update` exists only while enabled; every 0.25 s, if anything is tracked, the sweep runs. It needs `ALIVE` (nil between game states, `scripts/managers/position_lookup/position_lookup_manager.lua:40,44`).
@@ -64,17 +67,18 @@ Lightweight markers for ammo, grenade refills, medical crates, stimms, health st
 | `HudElementInteraction._interaction_units` | `scripts/ui/hud/elements/interaction/hud_element_interaction.lua:14,64-106,108-120` |
 | `UIHud:element`, visible elements | `scripts/managers/ui/ui_hud.lua:20,271,387` |
 | `HudElementBase` `_parent`, `has_widget`, `_unregister_widget_name` | `scripts/ui/hud/elements/hud_element_base.lua:13,56-64` |
+| Idol pick and destruction | `scripts/managers/collectibles/collectibles_manager.lua:28-66`; `scripts/extension_systems/destructible/destructible_extension.lua:125-133,338-395,434-436`; `gameplay_init_step_pacing.lua:20` |
 | `ALIVE` lifetime | `scripts/managers/position_lookup/position_lookup_manager.lua:40,44` |
 | `Camera.local_position`, `math.easeCubic` (LuaCATS added 2026-10-13) | `types/SOURCES.md` |
 | DMF events, hooks, lifecycle | `dmf-source/scripts/mods/dmf/modules/core/events.lua:11-70`, `hooks.lua:181-185,318-333`, `toggling.lua:10-22`, `dmf_loader.lua:89-98` |
 
 ## Tests
-- `tools/luajit/luajit mods/active/LightweightStrategicalMarkers/tests/test_categories.lua` -> 2026-10-13: 61 pickups, 11 marked, 50 ignored, 3 interaction types, 0 failures.
-- `tools/luajit/luajit mods/active/LightweightStrategicalMarkers/tests/test_runtime.lua` -> 2026-10-13: 13653 checks, 0 failures (12 runs, identical).
+- `tools/luajit/luajit mods/active/LightweightStrategicalMarkers/tests/test_categories.lua` -> 2026-10-13: 61 pickups, 17 marked, 44 ignored, 3 interaction types, 0 failures.
+- `tools/luajit/luajit mods/active/LightweightStrategicalMarkers/tests/test_runtime.lua` -> 2026-10-13: 13672 checks, 0 failures (5 runs, identical).
 - `bash tools/validate.sh mods/active/LightweightStrategicalMarkers` -> 2026-10-13: LuaLS 0 diagnostics, LuaJIT parse passed. `tools\validate.ps1` not run.
 
 ## Runtime status
-Nothing confirmed in game yet. Smallest in-game test:
+Smallest in-game test:
 1. Enable Lightweight Strategical Markers; turn off Markers Improved AIO's matching categories or disable it. Restart the game (first install).
 2. Start a low-difficulty mission. Expected: markers with distances on ammo, grenades, medical crates, stimms, health stations and chests within 40 m, only for items in line of sight.
 3. Walk up to a pickup. Expected: at about 15 m the marker hands over to the game's own marker; never two icons on one item.
@@ -83,7 +87,9 @@ Nothing confirmed in game yet. Smallest in-game test:
 6. Use a health station. Expected: the charge count drops; at 0 the marker dims.
 7. Ctrl+Shift+R mid-mission. Expected: markers come back, no errors in the console log.
 
-Runtime-pending: everything above; also hot-join, dedicated-server versus Psykanium, expedition ammo crates, frame cost compared with Markers Improved AIO.
+8. Options: turn on plasteel, diamantine, grimoires, scriptures and heretical idols. Expected: those items get markers; a destroyed idol loses its marker.
+
+Confirmed in game 2026-10-13 (user): the base markers work. Runtime-pending: steps 3-8 individually; also hot-join, dedicated-server versus Psykanium, expedition ammo crates, frame cost compared with Markers Improved AIO.
 
 ## Open items
 - 2026-10-13: confirm in game that chests and health stations are discovered on a client (their type comes from level data, which is not Lua and could not be checked).

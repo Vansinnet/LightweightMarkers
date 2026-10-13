@@ -44,6 +44,18 @@ return {
                     checkbox("show_chests", true),
                 },
             },
+            {
+                setting_id = "collectibles",
+                type = "group",
+                title = "collectibles",
+                sub_widgets = {
+                    checkbox("show_plasteel", false),
+                    checkbox("show_diamantine", false),
+                    checkbox("show_grimoires", false),
+                    checkbox("show_scriptures", false),
+                    checkbox("show_heretical_idols", false),
+                },
+            },
         },
     },
 }

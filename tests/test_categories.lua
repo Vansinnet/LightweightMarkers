@@ -38,7 +38,7 @@ end
 -- fails, so a game update that adds pickups forces a decision.
 local IGNORED = {
     -- Mission, side-mission and event items.
-    "communications_hack_device", "consumable", "grimoire", "tome", "hordes_mcguffin",
+    "communications_hack_device", "consumable", "hordes_mcguffin",
     "paper_pickup", "paper_pickup_02", "paper_pickup_03", "paper_pickup_04",
     "skulls_01_pickup", "stolen_rations_01_pickup_small", "stolen_rations_01_pickup_medium",
     "live_event_leftover_01_pickup_small", "live_event_leftover_01_pickup_medium",
@@ -48,8 +48,6 @@ local IGNORED = {
     "battery_01_luggable", "battery_02_luggable", "container_01_luggable", "container_02_luggable",
     "container_03_luggable", "control_rod_01_luggable", "prismata_case_01_luggable",
     "expedition_explosive_luggable_01",
-    -- Crafting materials.
-    "small_metal", "large_metal", "small_platinum", "large_platinum",
     -- Expedition-only items (the large ammo crate is marked).
     "expedition_currency_small_tier_1", "expedition_currency_small_tier_2",
     "expedition_loot_small_tier_1", "expedition_loot_small_tier_2", "expedition_loot_small_tier_3",
@@ -134,7 +132,7 @@ end
 
 -- A pickup is never classified by its interaction type: a crafting material is a pickup whose
 -- interaction type is not ours, and a pickup type wins over a matching interaction type.
-if Categories.classify("small_metal", "chest") ~= nil then
+if Categories.classify("hordes_mcguffin", "chest") ~= nil then
     fail("an unmarked pickup was classified by its interaction type")
 end
 
