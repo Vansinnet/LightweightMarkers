@@ -1,5 +1,5 @@
 # LightweightStrategicalMarkers: design
-Status 2026-10-13: 1.0.0 released on GitHub, ModID `LightweightStrategicalMarkers`. Verified: static and offline (`tests/`); independent source review 2026-10-13; all features confirmed in game by the user 2026-10-13. Item colours and tagging through our markers (new in 1.0.0) are not yet confirmed in game.
+Status 2026-10-13: 1.0.0 released on GitHub, ModID `LightweightStrategicalMarkers`. Verified: static and offline (`tests/`); independent source review 2026-10-13; all features confirmed in game by the user 2026-10-13. Tagging through our markers confirmed in game by the user 2026-10-13; item colours (new in 1.0.0) not yet.
 
 Lightweight markers for ammo, grenade refills, medical crates, stimms, health stations and chests, built as a lean alternative to Markers Improved AIO (`referensmoddar/markers_aio`).
 
