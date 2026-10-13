@@ -1,6 +1,6 @@
 # Lightweight Strategical Markers
 
-A client-side [Darktide Mod Framework (DMF)](https://github.com/Darktide-Mod-Framework/Darktide-Mod-Framework) mod for Warhammer 40,000: Darktide. It shows markers on ammo, grenade refills, medical crates, stimms, health stations and chests, with the game's own icons.
+A client-side [Darktide Mod Framework (DMF)](https://github.com/Darktide-Mod-Framework/Darktide-Mod-Framework) mod for Warhammer 40,000: Darktide. It shows markers on ammo, grenade refills, medical crates, stimms, health stations and chests, with the game's own icons. Plasteel, diamantine, grimoires, scriptures and heretical idols can be turned on in the options.
 
 It is built to cost as little as possible:
 
@@ -21,6 +21,11 @@ It is built to cost as little as possible:
 | Stimms | The game's stimm icons | Tinted like the stimm cases: green medical, red power, blue speed, yellow concentration |
 | Health stations | The game's health station icon | Remaining charges; dimmed when empty |
 | Chests | The game's chest icon | Gold; removed once the chest is opened |
+| Plasteel (off by default) | The game's material icon | Steel grey; large amounts bigger |
+| Diamantine (off by default) | The game's material icon | Blue; large amounts bigger |
+| Grimoires (off by default) | The game's side-mission item icon | Purple |
+| Scriptures (off by default) | The game's side-mission item icon | Gold |
+| Heretical idols (off by default) | The game's priority-target icon | Only the idols the mission actually uses; removed once destroyed |
 
 Within about 15 m the game shows its own marker for the same item. This mod's marker then fades out, so there is never a double icon, and tags and the interaction prompt look as usual.
 
@@ -33,6 +38,7 @@ Within about 15 m the game shows its own marker for the same item. This mod's ma
 | Marker size (%) | 100 (50–200) | Size of the markers. |
 | Show distance | On | Distance in metres below each marker. |
 | Items | All on | Ammo, grenades, medical crates, stimms, health stations and chests can each be turned off. |
+| Materials and collectibles | All off | Plasteel, diamantine, grimoires, scriptures and heretical idols. A group that is off costs nothing: its items are not even tracked. |
 
 ## Compatibility
 
@@ -46,7 +52,7 @@ Markers Improved AIO marks the same items. Turn off its matching categories, or 
 
 ## Testing status
 
-Developed against Darktide 1.13.1. Static checks and offline tests pass; the mod has not yet been tested in game.
+Developed against Darktide 1.13.1. Static checks and offline tests pass. The base markers work in game; the material and collectible options are not yet tested in game.
 
 ## License
 

@@ -11,11 +11,13 @@ local DEFAULT_COLOR = { 255, 216, 237, 190 }
 -- scripts/ui/hud/elements/world_markers/templates/world_marker_template_interaction.lua).
 local PICKUP_OFFSET = { 0, 0, 0.8 }
 local NO_OFFSET = { 0, 0, 0 }
+-- Heretical idols are not interactables and have no marker node; the marker floats above the base.
+local IDOL_OFFSET = { 0, 0, 0.5 }
 
 local function kind(group, icon, color, size, offset)
     return {
         group = group,
-        icon = ICONS .. icon,
+        icon = icon:find("/", 1, true) and icon or ICONS .. icon,
         color = color or DEFAULT_COLOR,
         size = size or 1,
         offset = offset or PICKUP_OFFSET,
@@ -39,10 +41,20 @@ local kinds = {
     stimm_concentration = kind("stimms", "pocketable_syringe_ability", { 255, 255, 215, 40 }),
     health_station = kind("health_stations", "respawn", nil, nil, NO_OFFSET),
     chest = kind("chests", "default", { 255, 226, 199, 126 }, nil, NO_OFFSET),
+    -- Off by default. Materials share vanilla's icon; tint tells the material, size the amount.
+    plasteel_small = kind("plasteel", "environment_generic", { 255, 190, 200, 205 }),
+    plasteel_large = kind("plasteel", "environment_generic", { 255, 190, 200, 205 }, 1.25),
+    diamantine_small = kind("diamantine", "environment_generic", { 255, 110, 195, 255 }),
+    diamantine_large = kind("diamantine", "environment_generic", { 255, 110, 195, 255 }, 1.25),
+    grimoire = kind("grimoires", "pocketable_default", { 255, 175, 95, 255 }),
+    scripture = kind("scriptures", "pocketable_default", { 255, 240, 210, 120 }),
+    -- Vanilla shows no marker on idols; this is the game's priority-target icon.
+    heretical_idol = kind("heretical_idols", "enemy_priority", { 255, 220, 70, 150 }, nil, IDOL_OFFSET),
 }
 
 kinds.health_station.charges = true
 kinds.chest.chest = true
+kinds.heretical_idol.idol = true
 
 for name, data in pairs(kinds) do
     data.name = name
@@ -61,6 +73,12 @@ local by_pickup = {
     syringe_power_boost_pocketable = kinds.stimm_power,
     syringe_speed_boost_pocketable = kinds.stimm_speed,
     syringe_ability_boost_pocketable = kinds.stimm_concentration,
+    small_metal = kinds.plasteel_small,
+    large_metal = kinds.plasteel_large,
+    small_platinum = kinds.diamantine_small,
+    large_platinum = kinds.diamantine_large,
+    grimoire = kinds.grimoire,
+    tome = kinds.scripture,
 }
 
 -- Interaction types of units that are not pickups. "deployable_marker" is used only by the
@@ -79,6 +97,11 @@ local group_settings = {
     stimms = "show_stimms",
     health_stations = "show_health_stations",
     chests = "show_chests",
+    plasteel = "show_plasteel",
+    diamantine = "show_diamantine",
+    grimoires = "show_grimoires",
+    scriptures = "show_scriptures",
+    heretical_idols = "show_heretical_idols",
 }
 
 local Categories = {

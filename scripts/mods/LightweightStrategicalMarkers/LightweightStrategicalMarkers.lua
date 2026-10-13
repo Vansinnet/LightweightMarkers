@@ -67,8 +67,10 @@ local kinds = {}
 local index_of = {}
 local count = 0
 
+-- Only items whose group is on are tracked, so turned-off groups (most collectibles by default)
+-- cost nothing; turning one on reseeds the registry.
 local function track(unit, kind)
-    if index_of[unit] then
+    if index_of[unit] or not config.group_enabled[kind.group] then
         return
     end
 
@@ -127,6 +129,21 @@ mod:hook_safe("InteracteeExtension", "set_interaction_context", function(self, i
     end
 end)
 
+-- The CollectiblesManager picks one idol per section from the level seed on every peer and hands
+-- it its data (scripts/managers/collectibles/collectibles_manager.lua, on_gameplay_post_init).
+-- Candidates it did not pick keep their component data, which has no `id`.
+mod:hook_safe("DestructibleExtension", "set_collectible_data", function(self, data)
+    track(data and data.unit or self._unit, Categories.kinds.heretical_idol)
+end)
+
+local function idol_destroyed(unit)
+    local destructible = ScriptUnit.has_extension(unit, "destructible_system")
+    local destruction_info = destructible and destructible._destruction_info
+
+    -- Stage 0 is the last stage, also on clients (destructible_extension.lua, _dequeue_stage).
+    return not destruction_info or destruction_info.current_stage_index == 0
+end
+
 -- After enabling or a hot reload the interactables already exist; collect them once.
 local function seed()
     clear_registry()
@@ -168,6 +185,18 @@ local function seed()
 
             if kind then
                 track(unit, kind)
+            end
+        end
+    end
+
+    local destructible_system = config.group_enabled.heretical_idols and extension_manager:system("destructible_system")
+
+    if destructible_system then
+        for unit, extension in pairs(destructible_system:unit_to_extension_map()) do
+            local collectible_data = rawget(extension, "_collectible_data")
+
+            if collectible_data and collectible_data.id and ALIVE[unit] and not idol_destroyed(unit) then
+                track(unit, Categories.kinds.heretical_idol)
             end
         end
     end
@@ -291,6 +320,9 @@ local function sweep()
                     wanted = false
                     finished = true
                 end
+            elseif wanted and kind.idol and idol_destroyed(unit) then
+                wanted = false
+                finished = true
             end
 
             if wanted then
@@ -416,8 +448,14 @@ end
 
 mod.on_setting_changed = function()
     refresh_config()
-    -- Markers take their settings in on_enter; the next sweep rebuilds them.
+    -- Markers take their settings in on_enter; the next sweep rebuilds them. The registry is rebuilt
+    -- too, since it holds only the groups that are on.
     remove_all_markers()
+
+    if mod.update then
+        seed()
+    end
+
     sweep_timer = SWEEP_INTERVAL
 end
 

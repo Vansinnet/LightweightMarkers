@@ -1,7 +1,7 @@
 return {
     mod_name = { en = "Lightweight Strategical Markers" },
     mod_description = {
-        en = "Lightweight markers for ammo, grenades, medical crates, stimms, health stations and chests, using the game's own icons.",
+        en = "Lightweight markers for ammo, grenades, medical crates, stimms, health stations and chests, and optionally crafting materials, grimoires, scriptures and heretical idols.",
     },
     see_through_walls = { en = "See markers through walls" },
     see_through_walls_tooltip = {
@@ -28,4 +28,17 @@ return {
     },
     show_chests = { en = "Chests" },
     show_chests_tooltip = { en = "Closed chests. The marker disappears when the chest is opened." },
+    collectibles = { en = "Materials and collectibles" },
+    show_plasteel = { en = "Plasteel" },
+    show_plasteel_tooltip = { en = "Plasteel crafting material. Large amounts get a larger marker." },
+    show_diamantine = { en = "Diamantine" },
+    show_diamantine_tooltip = { en = "Diamantine crafting material. Large amounts get a larger marker." },
+    show_grimoires = { en = "Grimoires" },
+    show_grimoires_tooltip = { en = "Grimoires for the side mission." },
+    show_scriptures = { en = "Scriptures" },
+    show_scriptures_tooltip = { en = "Scriptures for the side mission." },
+    show_heretical_idols = { en = "Heretical idols" },
+    show_heretical_idols_tooltip = {
+        en = "Heretical idols to destroy. The marker disappears when the idol is destroyed.",
+    },
 }
