@@ -106,6 +106,24 @@ local function clear_registry()
     count = 0
 end
 
+-- Vanilla's interaction marker sets its icon colour only when its visual type changes, for example
+-- on tagging (world_marker_template_interaction.lua, setup_marker_by_interaction_type). After each of
+-- its updates a tracked item with its own colour gets that colour back, so it looks the same at every
+-- distance. Markers clone the template when added, so they all carry the hooked function.
+local InteractionMarkerTemplate = require("scripts/ui/hud/elements/world_markers/templates/world_marker_template_interaction")
+
+mod:hook_safe(InteractionMarkerTemplate, "update_function", function(_, _, widget, marker)
+    local i = index_of[marker.unit]
+    local kind = i and kinds[i]
+
+    if kind and kind.recolor then
+        local icon_color = widget.style.icon.color
+        local color = kind.color
+
+        icon_color[1], icon_color[2], icon_color[3], icon_color[4] = color[1], color[2], color[3], color[4]
+    end
+end)
+
 local function pickup_type(unit)
     if Unit.has_data(unit, "pickup_type") then
         return Unit.get_data(unit, "pickup_type")

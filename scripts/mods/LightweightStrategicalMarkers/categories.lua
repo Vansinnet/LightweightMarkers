@@ -5,6 +5,12 @@ local ICONS = "content/ui/materials/hud/interactions/icons/"
 
 -- Vanilla interaction icon colour (Color.ui_hud_green_super_light, scripts/foundation/utilities/color.lua).
 local DEFAULT_COLOR = { 255, 216, 237, 190 }
+-- Stimm colours follow Markers Improved AIO's defaults; health stations share the medical stimm's.
+local MEDICAL_GREEN = { 255, 30, 255, 30 }
+local POWER_RED = { 255, 255, 30, 30 }
+local SPEED_BLUE = { 255, 30, 150, 255 }
+local CONCENTRATION_YELLOW = { 255, 255, 255, 30 }
+local MATERIAL_LIGHT_BLUE = { 255, 140, 200, 255 }
 
 -- Pickups float 0.8 m above their marker node like vanilla "pickup" interaction markers; chests and
 -- health stations sit on it ("default" and "point_of_interest" visuals in
@@ -19,6 +25,8 @@ local function kind(group, icon, color, size, offset)
         group = group,
         icon = icon:find("/", 1, true) and icon or ICONS .. icon,
         color = color or DEFAULT_COLOR,
+        -- A kind with its own colour also recolours vanilla's interaction marker for the item.
+        recolor = color ~= nil,
         size = size or 1,
         offset = offset or PICKUP_OFFSET,
     }
@@ -28,24 +36,25 @@ end
 -- template's icon. At runtime the interactee's own interaction_icon() wins, so a level override
 -- (for example on a chest) also matches vanilla.
 -- Every kind looks like vanilla's interaction marker for it at the hand-over distance (same icon,
--- colour, frame and size), so the switch to vanilla's marker up close is invisible. Only heretical
--- idols, which vanilla never marks, have their own look.
+-- frame and size), so the switch to vanilla's marker up close is invisible. Kinds with their own
+-- colour give vanilla's marker that colour too; heretical idols, which vanilla never marks, have
+-- their own look.
 local kinds = {
     ammo_small = kind("ammo", "ammunition"),
     ammo_large = kind("ammo", "ammunition"),
     ammo_crate = kind("ammo", "pocketable_ammo"),
     grenade = kind("grenades", "grenade"),
     medical_crate = kind("medical", "pocketable_medkit"),
-    stimm_medical = kind("stimms", "pocketable_syringe_corruption"),
-    stimm_power = kind("stimms", "pocketable_syringe_power"),
-    stimm_speed = kind("stimms", "pocketable_syringe_speed"),
-    stimm_concentration = kind("stimms", "pocketable_syringe_ability"),
-    health_station = kind("health_stations", "respawn", nil, nil, NO_OFFSET),
+    stimm_medical = kind("stimms", "pocketable_syringe_corruption", MEDICAL_GREEN),
+    stimm_power = kind("stimms", "pocketable_syringe_power", POWER_RED),
+    stimm_speed = kind("stimms", "pocketable_syringe_speed", SPEED_BLUE),
+    stimm_concentration = kind("stimms", "pocketable_syringe_ability", CONCENTRATION_YELLOW),
+    health_station = kind("health_stations", "respawn", MEDICAL_GREEN, nil, NO_OFFSET),
     chest = kind("chests", "default", nil, nil, NO_OFFSET),
-    plasteel_small = kind("plasteel", "environment_generic"),
-    plasteel_large = kind("plasteel", "environment_generic"),
-    diamantine_small = kind("diamantine", "environment_generic"),
-    diamantine_large = kind("diamantine", "environment_generic"),
+    plasteel_small = kind("plasteel", "environment_generic", MATERIAL_LIGHT_BLUE),
+    plasteel_large = kind("plasteel", "environment_generic", MATERIAL_LIGHT_BLUE),
+    diamantine_small = kind("diamantine", "environment_generic", MATERIAL_LIGHT_BLUE),
+    diamantine_large = kind("diamantine", "environment_generic", MATERIAL_LIGHT_BLUE),
     grimoire = kind("grimoires", "pocketable_default"),
     scripture = kind("scriptures", "pocketable_default"),
     -- Vanilla shows no marker on idols; this is the game's priority-target icon.

@@ -89,6 +89,12 @@ package.preload["scripts/managers/ui/ui_widget"] = function()
     }
 end
 
+local InteractionMarkerTemplate = { name = "interaction" }
+
+package.preload["scripts/ui/hud/elements/world_markers/templates/world_marker_template_interaction"] = function()
+    return InteractionMarkerTemplate
+end
+
 -- Fake HUD ---------------------------------------------------------------------------------------
 
 local TEMPLATE_NAME = "LightweightStrategicalMarkers_marker"
@@ -328,6 +334,10 @@ local mod = {
         return dofile(MODS .. path .. ".lua")
     end,
     hook_safe = function(_, target, method, handler)
+        if type(target) == "table" then
+            target = target.name
+        end
+
         hooks[target .. "." .. method] = handler
     end,
 }
@@ -450,7 +460,28 @@ local power_marker = element:marker_for(power)
 check(power_marker.widget.content.icon == ICONS .. "pocketable_syringe_power", "stimm uses the game's own icon")
 local icon_color = power_marker.widget.style.icon.color
 
-check(icon_color[2] == 216 and icon_color[3] == 237 and icon_color[4] == 190, "icons use vanilla's colour")
+check(icon_color[2] == 255 and icon_color[3] == 30 and icon_color[4] == 30, "power stimm is red")
+local ammo_color = element:marker_for(ammo).widget.style.icon.color
+
+check(ammo_color[2] == 216 and ammo_color[3] == 237 and ammo_color[4] == 190, "ammo uses vanilla's colour")
+
+-- Vanilla's interaction marker takes the item's colour after its own update; other items keep vanilla's.
+local function vanilla_icon_color(unit)
+    local widget = { style = { icon = { color = { 255, 216, 237, 190 } } } }
+
+    hooks["interaction.update_function"](element, nil, widget, { unit = unit })
+
+    return widget.style.icon.color
+end
+
+local vanilla_power = vanilla_icon_color(power)
+
+check(vanilla_power[2] == 255 and vanilla_power[3] == 30 and vanilla_power[4] == 30, "vanilla's power stimm marker is red")
+check(vanilla_icon_color(ammo)[2] == 216, "vanilla's ammo marker keeps its colour")
+check(vanilla_icon_color(door)[2] == 216, "untracked units keep vanilla's colour")
+local vanilla_station = vanilla_icon_color(station)
+
+check(vanilla_station[2] == 30 and vanilla_station[3] == 255 and vanilla_station[4] == 30, "vanilla's health station marker is green")
 check(math.abs(power_marker.widget.style.ring.size[1] - 38.4) < 1e-6, "ring matches vanilla at the hand-over distance")
 check(power_marker.widget.content.ring == "content/ui/materials/hud/interactions/frames/mission_top", "standard frame")
 check(element:marker_for(ammo).widget.content.icon == ICONS .. "ammunition", "pickup without an interactee icon falls back to the kind icon")
