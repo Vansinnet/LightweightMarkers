@@ -28,6 +28,8 @@ Stimms are coloured by type (medical green, power red, speed blue, concentration
 
 Within about 15 m the game shows its own marker for the same item. This mod's marker then fades out, so there is never a double icon, and tags and the interaction prompt look as usual. Markers use the game's frame and size at that distance, and the game's marker gets the same colour, so the hand-over is not visible and an item keeps its colour at every distance. Like the game's own markers, small and large amounts of the same item look alike.
 
+Aim at a marker and tag it as usual, also beyond the game's 15 m and, with "See markers through walls" on, behind walls. Chests and heretical idols cannot be tagged, as in the base game.
+
 ## Settings
 
 | Setting | Default | Effect |

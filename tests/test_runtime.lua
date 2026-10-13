@@ -276,6 +276,12 @@ Managers = {
                             return destructible_map
                         end,
                     }
+                elseif name == "smart_tag_system" then
+                    return {
+                        unit_tag_id = function(_, unit)
+                            return unit.tag_id
+                        end,
+                    }
                 end
             end,
         },
@@ -449,6 +455,12 @@ check(#element:ours() == 5, "five markers, got %d", #element:ours())
 local power_marker = element:marker_for(power)
 
 check(power_marker.widget.content.icon == ICONS .. "pocketable_syringe_power", "stimm uses the game's own icon")
+check(power_marker.template.using_smart_tag_system == true, "markers are taggable")
+check(math.abs(power_marker.template.size[1] - 38.4) < 1e-6, "tag box matches the ring")
+check(power_marker.template.get_smart_tag_id(power_marker) == nil, "untagged unit has no tag id")
+power.tag_id = 7
+check(power_marker.template.get_smart_tag_id(power_marker) == 7, "tagged unit returns its tag id")
+power.tag_id = nil
 local icon_color = power_marker.widget.style.icon.color
 
 check(icon_color[2] == 255 and icon_color[3] == 30 and icon_color[4] == 30, "power stimm is red")

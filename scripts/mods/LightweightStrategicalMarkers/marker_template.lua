@@ -62,6 +62,15 @@ return function(ctx)
     template.max_distance = 40
     template.check_line_of_sight = true
     template.screen_clamp = false
+    -- Taggable like vanilla's interaction marker: the tagging HUD picks the nearest marker of a
+    -- smart-tag template under the crosshair (its `size` box), in line of sight unless the marker
+    -- checks none, within max_distance, and only for units with a smart tag extension that can be
+    -- tagged (hud_element_smart_tagging.lua, _is_marker_valid_for_tagging, _find_world_marker_target).
+    template.using_smart_tag_system = true
+    template.size = { RING_SIZE, RING_SIZE }
+    template.get_smart_tag_id = function(marker)
+        return Managers.state.extension:system("smart_tag_system"):unit_tag_id(marker.unit)
+    end
     template.fade_settings = {
         default_fade = 1,
         fade_from = 0,
@@ -220,6 +229,7 @@ return function(ctx)
         content.line_of_sight_progress = check_line_of_sight and 0 or 1
 
         self.position_offset = kind.offset
+        self.size[1], self.size[2] = ring_size, ring_size
         self.max_distance = max_distance
         self.check_line_of_sight = check_line_of_sight
         marker.lsm_check_line_of_sight = check_line_of_sight
