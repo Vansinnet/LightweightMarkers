@@ -44,8 +44,7 @@ local IGNORED = {
     "live_event_leftover_01_pickup_small", "live_event_leftover_01_pickup_medium",
     "live_event_leftover_01_pickup_large", "live_event_saints_01_pickup_small",
     "live_event_saints_01_pickup_medium", "live_event_saints_01_pickup_large",
-    -- Luggables.
-    "battery_01_luggable", "battery_02_luggable",
+    -- Luggables other than power cells and mission containers, which are marked.
     "control_rod_01_luggable", "prismata_case_01_luggable",
     "expedition_explosive_luggable_01",
     -- Expedition-only items (the large ammo crate is marked).
