@@ -1,0 +1,31 @@
+return {
+    mod_name = { en = "Lightweight Strategical Markers" },
+    mod_description = {
+        en = "Lightweight markers for ammo, grenades, medical crates, stimms, health stations and chests, using the game's own icons.",
+    },
+    see_through_walls = { en = "See markers through walls" },
+    see_through_walls_tooltip = {
+        en = "Show markers for items behind walls. When off, a marker shows only while the item is in line of sight.",
+    },
+    max_distance = { en = "Marker distance (m)" },
+    max_distance_tooltip = { en = "How far away markers are shown. Larger values show items further away." },
+    marker_scale = { en = "Marker size (%%)" },
+    marker_scale_tooltip = { en = "Size of the markers." },
+    show_distance = { en = "Show distance" },
+    show_distance_tooltip = { en = "Show the distance in metres below each marker." },
+    categories = { en = "Items" },
+    show_ammo = { en = "Ammo" },
+    show_ammo_tooltip = { en = "Small and large ammo pickups and ammo crates." },
+    show_grenades = { en = "Grenades" },
+    show_grenades_tooltip = { en = "Grenade refills." },
+    show_medical = { en = "Medical crates" },
+    show_medical_tooltip = { en = "Medical crates, carried and deployed." },
+    show_stimms = { en = "Stimms" },
+    show_stimms_tooltip = { en = "Medical, power, speed and concentration stimms, each in its own colour." },
+    show_health_stations = { en = "Health stations" },
+    show_health_stations_tooltip = {
+        en = "Medicae stations with their remaining charges. Empty stations are dimmed.",
+    },
+    show_chests = { en = "Chests" },
+    show_chests_tooltip = { en = "Closed chests. The marker disappears when the chest is opened." },
+}
