@@ -829,6 +829,58 @@ frames(1)
 check(#element:ours() == live_before, "markers back after enabling (%d, before %d)", #element:ours(), live_before)
 check(vanilla_markers[1].template.update_function ~= vanilla_update, "vanilla update wrapped again after enabling")
 
+-- 11b. Stimm icons in the HUD: the own stimm slot and teammates' panels take the stimm's colour.
+local ITEMS = "content/items/pocketable/"
+
+local function new_weapon(weapon_name)
+    local weapon = {
+        _weapon_name = weapon_name,
+        _widgets_by_name = { icon = { style = { icon = { default_color = { 255, 1, 2, 3 } } } } },
+    }
+
+    hooks["HudElementPlayerWeapon.init"](weapon)
+
+    return weapon, weapon._widgets_by_name.icon.style.icon.default_color
+end
+
+local stimm_slot, stimm_color = new_weapon(ITEMS .. "syringe_power_boost_pocketable")
+local gun_slot, gun_color = new_weapon("content/items/weapons/player/ranged/shotgun_p1_m1")
+local inventory = { slot_pocketable_small = ITEMS .. "syringe_speed_boost_pocketable" }
+local panel = {
+    _widgets_by_name = { pocketable_small = { style = { texture = { color = { 255, 9, 9, 9 } } } } },
+    _extensions = { unit_data = { read_component = function(_, name)
+        return name == "inventory" and inventory or nil
+    end } },
+}
+local panel_color = panel._widgets_by_name.pocketable_small.style.texture.color
+
+check(stimm_color[1] == 255 and stimm_color[2] == 255 and stimm_color[3] == 30 and stimm_color[4] == 30, "own power stimm slot is red, alpha kept")
+check(gun_color[2] == 1 and gun_color[3] == 2 and gun_color[4] == 3, "weapon slots keep their colour")
+hooks["HudElementTeamPlayerPanel._update_pocketable_presentation"](panel)
+check(panel_color[2] == 30 and panel_color[3] == 150 and panel_color[4] == 255, "teammate's speed stimm is blue")
+check(panel._widgets_by_name.pocketable_small.dirty == true, "teammate's stimm widget redrawn")
+inventory.slot_pocketable_small = "content/items/pocketable/syringe_broker_pocketable"
+hooks["HudElementTeamPlayerPanel._update_pocketable_presentation"](panel)
+check(panel_color[2] == 9 and panel_color[3] == 9 and panel_color[4] == 9, "other items get vanilla's colour back")
+inventory.slot_pocketable_small = ITEMS .. "syringe_corruption_pocketable"
+hooks["HudElementTeamPlayerPanel._update_pocketable_presentation"](panel)
+hud.elements.HudElementPlayerWeaponHandler = {
+    _player_weapons = {
+        slot_pocketable_small = { hud_element_player_weapon = stimm_slot },
+        slot_primary = { hud_element_player_weapon = gun_slot },
+    },
+}
+hud.elements.HudElementTeamPanelHandler = { _player_panels_array = { { panel = panel } } }
+mod.on_disabled(false)
+check(stimm_color[2] == 1 and stimm_color[3] == 2 and stimm_color[4] == 3, "disable restores the own stimm slot")
+check(panel_color[2] == 9 and panel_color[3] == 9 and panel_color[4] == 9, "disable restores teammates' stimms")
+mod.on_enabled(false)
+check(stimm_color[2] == 255 and stimm_color[3] == 30, "enable tints the existing stimm slot")
+check(panel_color[2] == 30 and panel_color[3] == 255 and panel_color[4] == 30, "enable tints teammates' stimms")
+hud.elements.HudElementPlayerWeaponHandler = nil
+hud.elements.HudElementTeamPanelHandler = nil
+frames(1)
+
 -- 12. New HUD: ids of the old HUD are forgotten, markers are rebuilt in the new one.
 hooks["HudElementWorldMarkers.destroy"](element)
 

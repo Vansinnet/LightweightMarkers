@@ -147,9 +147,19 @@ local charge_colors = {
     MEDICAL_GREEN,
 }
 
+-- Inventory item -> stimm colour, for the stimm icons in the HUD. Pickups' inventory_item
+-- (scripts/settings/pickup/pickups/pocketable/syringe_*_pocketable_pickup.lua).
+local stimm_colors = {
+    ["content/items/pocketable/syringe_corruption_pocketable"] = MEDICAL_GREEN,
+    ["content/items/pocketable/syringe_power_boost_pocketable"] = POWER_RED,
+    ["content/items/pocketable/syringe_speed_boost_pocketable"] = SPEED_BLUE,
+    ["content/items/pocketable/syringe_ability_boost_pocketable"] = CONCENTRATION_YELLOW,
+}
+
 local Categories = {
     kinds = kinds,
     charge_colors = charge_colors,
+    stimm_colors = stimm_colors,
     by_pickup = by_pickup,
     by_interaction = by_interaction,
     group_settings = group_settings,
