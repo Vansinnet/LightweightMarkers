@@ -33,9 +33,9 @@ return {
     show_plasteel_tooltip = { en = "Plasteel crafting material." },
     show_diamantine = { en = "Diamantine" },
     show_diamantine_tooltip = { en = "Diamantine crafting material." },
-    show_carry_items = { en = "Power cells and containers" },
+    show_carry_items = { en = "Power cells, rods and containers" },
     show_carry_items_tooltip = {
-        en = "Marks the items you carry with both hands and put in place:\n- Power cells for medicae stations, often hidden away from the station. Some missions use the same power cells for objectives; those are marked too.\n- Containers that some missions ask you to carry to a drop-off point, such as sample containers.\nA marker is hidden while someone carries the item and once it is plugged in or delivered.",
+        en = "Marks the items you carry with both hands and put in place:\n- Power cells for medicae stations, often hidden away from the station. Some missions use the same power cells for objectives; those are marked too.\n- Cryonic rods and prismata crystal cases that objectives ask you to carry.\n- Containers that some missions ask you to carry to a drop-off point, such as sample containers, vacuum capsules and ammunition crates.\nA marker is hidden while someone carries the item and once it is plugged in or delivered.",
     },
     show_grimoires = { en = "Grimoires" },
     show_grimoires_tooltip = { en = "Grimoires for the side mission." },
