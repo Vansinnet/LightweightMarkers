@@ -13,7 +13,7 @@ It is built to cost as little as possible:
 
 | Item | Icon | Notes |
 | --- | --- | --- |
-| Small and large ammo | The game's ammo icon; large ammo the game's resupply icon | |
+| Small and large ammo | The game's ammo icon; large ammo the game's three-cartridge preset icon | |
 | Ammo crates | The game's ammo crate icon | Carried and deployed crates, and expedition ammo crates; deployed crates show their remaining charges |
 | Grenade refills | The game's grenade icon | |
 | Medical crates | The game's medical crate icon | Carried and deployed crates |

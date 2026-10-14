@@ -43,8 +43,7 @@ end
 -- idols, which vanilla never marks, have their own look.
 local kinds = {
     ammo_small = kind("ammo", "ammunition"),
-    -- Vanilla shows large ammo like small ammo; this is the game's objective resupply icon.
-    ammo_large = kind("ammo", "resupply"),
+    ammo_large = kind("ammo", "ammunition"),
     ammo_crate = kind("ammo", "pocketable_ammo"),
     ammo_crate_deployed = kind("ammo", "pocketable_ammo"),
     grenade = kind("grenades", "grenade"),
@@ -78,8 +77,9 @@ kinds.health_station.frame = "point_of_interest"
 kinds.health_station.charges = "health_station"
 kinds.ammo_crate_deployed.charges = "pickup"
 kinds.ammo_crate_deployed.keep_count = true
--- The kind's icon replaces vanilla's, on our marker and on vanilla's.
-kinds.ammo_large.own_icon = true
+-- An icon that replaces vanilla's, on our marker and on vanilla's, once its package is loaded
+-- (LightweightMarkers.lua, ICON_PACKAGE): the loadout-preset ammo icon, as in Markers Improved AIO.
+kinds.ammo_large.own_icon = "content/ui/materials/icons/presets/preset_16"
 kinds.chest.chest = true
 kinds.carry_item.luggable = true
 kinds.heretical_idol.idol = true

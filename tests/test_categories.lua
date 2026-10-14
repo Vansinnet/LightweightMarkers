@@ -91,7 +91,7 @@ for name, pickup in pairs(Pickups.by_name) do
             fail("%s is both marked and ignored", name)
         end
 
-        if kind.icon ~= vanilla_pickup_icon(pickup) and not kind.own_icon then
+        if kind.icon ~= vanilla_pickup_icon(pickup) then
             fail("%s: icon %s, vanilla shows %s", name, kind.icon, tostring(vanilla_pickup_icon(pickup)))
         end
 
