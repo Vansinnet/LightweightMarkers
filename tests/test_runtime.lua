@@ -894,7 +894,12 @@ check(element:marker_for(small_metal) ~= nil, "plasteel shown once turned on")
 check(element:marker_for(tome) ~= nil, "scripture shown once turned on")
 check(element:marker_for(idol) ~= nil, "picked idol shown once turned on")
 check(element:marker_for(hidden_idol) == nil, "idol candidate the game did not pick has no marker")
-check(element:marker_for(idol).widget.content.icon == ICONS .. "enemy_priority", "idol icon")
+local idol_widget = element:marker_for(idol).widget
+
+check(idol_widget.content.icon == ICONS .. "enemy", "idol icon")
+check(idol_widget.content.ring == "content/ui/materials/hud/interactions/frames/point_of_interest_top", "idol frame")
+check(idol_widget.style.ring.color[2] == 130 and idol_widget.style.icon.color[2] == 132, "idol ring and icon colours")
+check(element:marker_for(small_metal).widget.style.ring.color[2] == 226, "other frames keep vanilla's ring colour")
 check(element:marker_for(idol).template.position_offset[3] == 0.5, "idol marker floats above its base")
 idol_destructible._destruction_info.current_stage_index = 0
 frames(2)

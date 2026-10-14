@@ -64,12 +64,14 @@ local kinds = {
     carry_item = kind("carry_items", "default"),
     grimoire = kind("grimoires", "pocketable_default"),
     scripture = kind("scriptures", "pocketable_default"),
-    -- Vanilla shows no marker on idols; this is the game's priority-target icon.
-    heretical_idol = kind("heretical_idols", "enemy_priority", { 255, 220, 70, 150 }, nil, IDOL_OFFSET),
+    -- Vanilla shows no marker on idols; this is Markers Improved AIO's default idol look: the game's
+    -- enemy icon, its colour and frame (heretical_idol_markers_template.lua, markers_aio_data.lua).
+    heretical_idol = kind("heretical_idols", "enemy", { 255, 132, 156, 99 }, nil, IDOL_OFFSET),
 }
 
 -- Health stations use vanilla's larger "point_of_interest" frame; everything else the standard one.
 kinds.health_station.frame = "point_of_interest"
+kinds.heretical_idol.frame = "idol"
 
 -- Remaining charges as a number: a health station's synced charge amount, a deployed ammo crate's
 -- pickup charges (4 when deployed). The crate is tagged when deployed, which keeps vanilla's marker
