@@ -23,6 +23,10 @@ local SWEEP_INTERVAL = 0.25
 local ADD_MARGIN = 5
 local KEEP_MARGIN = 10
 local EMPTY_STATION_ALPHA = 0.45
+-- Large ammo's own icon (Categories, own_icon) is in the loadout-preset view element's package: 43
+-- materials and 44 small textures, under 1 MB. The game loads it only with the inventory view, so the
+-- mod holds a reference while enabled and uses the icon once it has loaded.
+local ICON_PACKAGE = "packages/ui/view_elements/view_element_profile_presets/view_element_profile_presets"
 
 local CHARGE_COLORS = Categories.charge_colors
 local COUNT_TEXT = {}
@@ -33,6 +37,10 @@ end
 
 local config = {
     group_enabled = {},
+}
+local icon_package = {
+    id = nil,
+    ready = false,
 }
 -- element: the HudElementWorldMarkers our template is registered in; marker ids belong to it.
 -- interaction_units: that HUD's HudElementInteraction._interaction_units, refreshed every sweep.
@@ -114,7 +122,7 @@ end
 -- _template_by_type), so the update is wrapped per marker with a plain call instead of a DMF hook,
 -- which would allocate and xpcall every frame for every interaction marker.
 -- Vanilla's update also resets the icon to the interactee's own every frame (update_function), so a
--- kind with its own icon writes it back the same way.
+-- kind with its own icon writes it back the same way once that icon's package is loaded.
 local function recolored_update(parent, ui_renderer, widget, marker, template, dt, t)
     local animating = marker.lsm_vanilla_update(parent, ui_renderer, widget, marker, template, dt, t)
     local i = index_of[marker.unit]
@@ -127,8 +135,8 @@ local function recolored_update(parent, ui_renderer, widget, marker, template, d
         icon_color[1], icon_color[2], icon_color[3], icon_color[4] = color[1], color[2], color[3], color[4]
     end
 
-    if kind and kind.own_icon then
-        widget.content.icon = kind.icon
+    if kind and kind.own_icon and icon_package.ready then
+        widget.content.icon = kind.own_icon
     end
 
     return animating
@@ -287,10 +295,11 @@ local function seed()
 end
 
 local function add_marker(unit, kind)
-    -- Vanilla's own icon for this unit, including level overrides, unless the kind has its own;
-    -- the kind's icon otherwise.
-    local interactee = not kind.own_icon and ScriptUnit.has_extension(unit, "interactee_system")
-    local icon = interactee and interactee:interaction_icon() or kind.icon
+    -- The kind's own icon once loaded, else vanilla's own icon for this unit, including level
+    -- overrides; the kind's icon otherwise.
+    local own_icon = icon_package.ready and kind.own_icon
+    local interactee = not own_icon and ScriptUnit.has_extension(unit, "interactee_system")
+    local icon = own_icon or interactee and interactee:interaction_icon() or kind.icon
 
     -- on_enter runs synchronously inside the trigger and records the marker in marker_by_unit.
     Managers.event:trigger("add_world_marker_unit", TEMPLATE_NAME, unit, nil, {
@@ -470,6 +479,35 @@ local function sweep()
     end
 end
 
+-- Loads the icon package once and, when it is in, rebuilds the markers so they take the icon.
+local function poll_icon_package()
+    local package_manager = Managers.package
+
+    if not package_manager then
+        return
+    end
+
+    if not icon_package.id then
+        icon_package.id = package_manager:load(ICON_PACKAGE, mod:get_name())
+    elseif package_manager:has_loaded_id(icon_package.id) then
+        icon_package.ready = true
+        remove_all_markers()
+    end
+end
+
+-- Called after our markers are flagged and vanilla's are unwrapped: vanilla's update puts its own icon
+-- back before the next draw.
+local function release_icon_package()
+    local id = icon_package.id
+
+    icon_package.id = nil
+    icon_package.ready = false
+
+    if id and Managers.package then
+        Managers.package:release(id)
+    end
+end
+
 local sweep_timer = 0
 
 local function update(dt)
@@ -483,6 +521,10 @@ local function update(dt)
 
     if sweep_timer > SWEEP_INTERVAL then
         sweep_timer = 0
+    end
+
+    if not icon_package.ready then
+        poll_icon_package()
     end
 
     if count > 0 then
@@ -622,6 +664,7 @@ mod.on_disabled = function()
     tint_hud(false)
     remove_all_markers()
     unwrap_vanilla(state.element)
+    release_icon_package()
     unregister()
     clear_registry()
 end
@@ -636,6 +679,7 @@ mod.on_unload = function(exit_game)
     tint_hud(false)
     remove_all_markers()
     unwrap_vanilla(state.element)
+    release_icon_package()
     unregister()
     clear_registry()
 end

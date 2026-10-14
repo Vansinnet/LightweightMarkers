@@ -264,6 +264,8 @@ end
 
 local interactee_map = {}
 local destructible_map = {}
+-- The package of large ammo's own icon: loaded once the test says so.
+local package_state = { loaded = false, loads = {}, released = {} }
 
 Managers = {
     state = {
@@ -294,6 +296,19 @@ Managers = {
     ui = {
         get_hud = function()
             return hud
+        end,
+    },
+    package = {
+        load = function(_, name, reference_name)
+            package_state.loads[#package_state.loads + 1] = { name = name, reference_name = reference_name }
+
+            return #package_state.loads
+        end,
+        has_loaded_id = function(_, id)
+            return package_state.loaded and package_state.released[id] == nil
+        end,
+        release = function(_, id)
+            package_state.released[id] = true
         end,
     },
     event = {
@@ -585,14 +600,27 @@ local far_marker = element:marker_for(far)
 
 check(far_marker.draw == false, "beyond 40 m the marker exists but is not drawn")
 check(far_marker.widget.style.icon.size[1] == ammo_marker.widget.style.icon.size[1], "large ammo has vanilla's size (same as small)")
-check(far_marker.widget.content.icon == ICONS .. "resupply", "large ammo has its own icon")
 
+-- Large ammo's own icon: vanilla's until its package has loaded, then on both markers.
+local PRESET_ICON = "content/ui/materials/icons/presets/preset_16"
+local ICON_PACKAGE = "packages/ui/view_elements/view_element_profile_presets/view_element_profile_presets"
 local vanilla_far = add_vanilla_marker(far)
 local vanilla_far_widget = { content = { icon = ICONS .. "ammunition" }, style = { icon = { color = { 255, 216, 237, 190 } } } }
 
+check(#package_state.loads == 1 and package_state.loads[1].name == ICON_PACKAGE, "icon package requested once")
+check(package_state.loads[1].reference_name == "LightweightMarkers", "under the mod's reference name")
+check(far_marker.widget.content.icon == ICONS .. "ammunition", "large ammo keeps vanilla's icon until the package has loaded")
 vanilla_far.template.update_function(element, nil, vanilla_far_widget, vanilla_far, vanilla_far.template)
-check(vanilla_far_widget.content.icon == ICONS .. "resupply", "vanilla's large ammo marker gets the same icon")
+check(vanilla_far_widget.content.icon == ICONS .. "ammunition", "vanilla's marker too")
+package_state.loaded = true
+frames(2)
+far_marker = element:marker_for(far)
+check(far_marker.widget.content.icon == PRESET_ICON, "large ammo takes its own icon once loaded")
+check(element:marker_for(power).widget.content.icon == ICONS .. "pocketable_syringe_power", "other items keep theirs")
+vanilla_far.template.update_function(element, nil, vanilla_far_widget, vanilla_far, vanilla_far.template)
+check(vanilla_far_widget.content.icon == PRESET_ICON, "vanilla's large ammo marker gets the same icon")
 check(vanilla_far_widget.style.icon.color[2] == 216, "and keeps vanilla's colour")
+check(#package_state.loads == 1, "the package is loaded only once")
 
 -- 5. Opened chest: marker removed and never re-added.
 chest_state.open = true
@@ -758,8 +786,10 @@ check(mod.update == nil, "no update while disabled")
 local vanilla_markers = element._markers_by_type.interaction
 
 check(#vanilla_markers > 0 and vanilla_markers[1].template.update_function == vanilla_update, "vanilla update restored while disabled")
+check(package_state.released[1] == true, "icon package released while disabled")
 mod.on_enabled(false)
 frames(1)
+check(#package_state.loads == 2 and package_state.released[2] == nil, "icon package loaded again after enabling")
 check(#element:ours() == live_before, "markers back after enabling (%d, before %d)", #element:ours(), live_before)
 check(vanilla_markers[1].template.update_function ~= vanilla_update, "vanilla update wrapped again after enabling")
 
