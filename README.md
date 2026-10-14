@@ -13,8 +13,8 @@ It is built to cost as little as possible:
 
 | Item | Icon | Notes |
 | --- | --- | --- |
-| Small and large ammo | The game's ammo icon | |
-| Ammo crates | The game's ammo crate icon | Carried and deployed crates, and expedition ammo crates |
+| Small and large ammo | The game's ammo icon; large ammo the game's resupply icon | |
+| Ammo crates | The game's ammo crate icon | Carried and deployed crates, and expedition ammo crates; deployed crates show their remaining charges |
 | Grenade refills | The game's grenade icon | |
 | Medical crates | The game's medical crate icon | Carried and deployed crates |
 | Stimms | The game's stimm icons | |
@@ -25,9 +25,9 @@ It is built to cost as little as possible:
 | Grimoires and scriptures (off by default) | The game's side-mission item icon | |
 | Heretical idols (off by default) | The game's priority-target icon | Only the idols the mission actually uses; removed once destroyed |
 
-Stimms are coloured by type (medical green, power red, speed blue, concentration yellow), health stations green like the medical stimm, and plasteel and diamantine light blue. Everything else uses the game's colour.
+Stimms are coloured by type (medical green, power red, speed blue, concentration yellow), health stations green like the medical stimm, plasteel light orange and diamantine light blue. Charge counts are green at 4, yellow at 3, orange at 2 and red at 1. Everything else uses the game's colour.
 
-Within about 15 m the game shows its own marker for the same item. This mod's marker then fades out, so there is never a double icon, and tags and the interaction prompt look as usual. Markers use the game's frame and size at that distance, and the game's marker gets the same colour, so the hand-over is not visible and an item keeps its colour at every distance. Like the game's own markers, small and large amounts of the same item look alike.
+Within about 15 m the game shows its own marker for the same item. This mod's marker then fades out, so there is never a double icon, and tags and the interaction prompt look as usual. Markers use the game's frame and size at that distance, and the game's marker gets the same colour, so the hand-over is not visible and an item keeps its colour at every distance. Large ammo has its own icon, on the game's marker too; otherwise, like the game's own markers, small and large amounts of the same item look alike.
 
 Aim at a marker and tag it as usual, also beyond the game's 15 m and, with "See markers through walls" on, behind walls. Chests and heretical idols cannot be tagged, as in the base game.
 

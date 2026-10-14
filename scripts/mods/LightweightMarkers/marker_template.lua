@@ -37,7 +37,7 @@ local CONTENTS_HEIGHT = 24
 -- From the top of the visible ring to the centre of the predicted-contents text box.
 local CONTENTS_LIFT = 16
 local BACKGROUND_ALPHA = 200
--- Health station charges sit to the upper right of the ring.
+-- Charge counts sit to the upper right of the ring.
 local COUNT_GAP = 6
 local LINE_OF_SIGHT_SPEED = 8
 local EDGE_FADE = 5
@@ -245,10 +245,13 @@ return function(ctx)
         label.offset[2] = ring_size * 0.5
 
         local count = style.count
+        local count_gap = COUNT_GAP * config.marker_scale
 
         count.font_size = COUNT_FONT_SIZE * config.marker_scale
-        count.offset[1] = ring_size * 0.5 + COUNT_GAP * config.marker_scale
+        count.offset[1] = ring_size * 0.5 + count_gap
         count.offset[2] = -ring_size * 0.25
+        marker.lsm_count_gap = count_gap
+        marker.lsm_keep_count = kind.keep_count == true
 
         local contents = style.contents
         local lift = CONTENTS_LIFT * config.marker_scale
@@ -321,17 +324,20 @@ return function(ctx)
         local vanilla, vanilla_widget = vanilla_alpha(element, marker.unit)
         local yielded = vanilla >= FULL_YIELD
         local contents = content.contents
+        local keep_count = marker.lsm_keep_count and content.count ~= nil
+        local keeps_text = contents or keep_count
 
         if yielded then
             -- Vanilla's marker shows the item (in line of sight, or tagged), so ours takes no
-            -- raycasts until vanilla's stops showing, and is hidden unless it has predicted contents.
+            -- raycasts until vanilla's stops showing, and is hidden unless it keeps text: predicted
+            -- contents or a deployed crate's charges.
             if check_line_of_sight then
                 self.check_line_of_sight = false
                 marker.raycast_result = false
                 content.line_of_sight_progress = 1
             end
 
-            if not contents then
+            if not keeps_text then
                 marker.draw = false
 
                 return
@@ -364,9 +370,9 @@ return function(ctx)
 
         local alpha = line_of_sight * marker.lsm_dim
 
-        if contents then
-            -- The predicted contents stay while vanilla's marker takes over: only the ring, its
-            -- background and the icon fade, and the text sits above the larger of the two rings.
+        if keeps_text then
+            -- The text stays while vanilla's marker takes over: only the ring, its background and
+            -- the icon fade, and the text sits beside the larger of the two rings.
             local style = widget.style
             local own = 1 - vanilla
             local top = marker.lsm_ring_size
@@ -381,7 +387,16 @@ return function(ctx)
                 top = math_max(top, vanilla_ring.size[2])
             end
 
-            style.contents.offset[2] = -(top * 0.5 + marker.lsm_contents_lift)
+            if contents then
+                style.contents.offset[2] = -(top * 0.5 + marker.lsm_contents_lift)
+            end
+
+            if keep_count then
+                local offset = style.count.offset
+
+                offset[1] = top * 0.5 + marker.lsm_count_gap
+                offset[2] = -top * 0.25
+            end
         else
             alpha = alpha * (1 - vanilla)
         end
