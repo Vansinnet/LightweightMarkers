@@ -1,6 +1,6 @@
 # Lightweight Markers
 
-A client-side [Darktide Mod Framework (DMF)](https://github.com/Darktide-Mod-Framework/Darktide-Mod-Framework) mod for Warhammer 40,000: Darktide. It shows markers on ammo, grenade refills, medical crates, stimms, health stations and chests, with the game's own icons. Plasteel, diamantine, power cells and containers, grimoires, scriptures and heretical idols can be turned on in the options.
+A client-side [Darktide Mod Framework (DMF)](https://github.com/Darktide-Mod-Framework/Darktide-Mod-Framework) mod for Warhammer 40,000: Darktide. It shows markers on ammo, grenade refills, medical crates, stimms, health stations and chests, with the game's own icons. Plasteel, diamantine, power cells, rods and containers, grimoires, scriptures and heretical idols can be turned on in the options.
 
 It is built to cost as little as possible:
 
@@ -21,7 +21,7 @@ It is built to cost as little as possible:
 | Health stations | The game's health station icon | Remaining charges; dimmed when empty |
 | Chests | The game's chest icon | Removed once the chest is opened |
 | Plasteel and diamantine (off by default) | The game's material icon | |
-| Power cells and containers (off by default) | The game's pickup icon | Power cells for medicae stations (often hidden in the level) and objectives, and containers some missions ask you to carry to a drop-off point; hidden while carried, plugged in or delivered |
+| Power cells, rods and containers (off by default) | The game's pickup icon | Power cells for medicae stations (often hidden in the level) and objectives, cryonic rods and prismata crystal cases, and containers some missions ask you to carry to a drop-off point (such as vacuum capsules and ammunition crates); hidden while carried, plugged in or delivered |
 | Grimoires and scriptures (off by default) | The game's side-mission item icon | |
 | Heretical idols (off by default) | The game's enemy icon in a point-of-interest frame, as in Markers Improved AIO | Only the idols the mission actually uses; removed once destroyed |
 
@@ -41,7 +41,7 @@ Aim at a marker and tag it as usual, also beyond the game's 15 m and, with "See 
 | Marker size (%) | 100 (50–200) | Size of the markers. |
 | Show distance | Off | Distance in metres below each marker. |
 | Items | All on | Ammo, grenades, medical crates, stimms, health stations and chests can each be turned off. |
-| Materials and collectibles | All off | Plasteel, diamantine, power cells and containers, grimoires, scriptures and heretical idols. A group that is off costs nothing: its items are not even tracked. |
+| Materials and collectibles | All off | Plasteel, diamantine, power cells, rods and containers, grimoires, scriptures and heretical idols. A group that is off costs nothing: its items are not even tracked. |
 
 ## Compatibility
 

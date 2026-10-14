@@ -59,7 +59,8 @@ local kinds = {
     diamantine_small = kind("diamantine", "environment_generic", MATERIAL_LIGHT_BLUE),
     diamantine_large = kind("diamantine", "environment_generic", MATERIAL_LIGHT_BLUE),
     -- Two-handed items carried to a socket: power cells for medicae stations
-    -- (health_station_extension.lua, register_socket_unit) and objectives, and mission containers.
+    -- (health_station_extension.lua, register_socket_unit) and objectives, objective control rods and
+    -- prismata cases, and mission containers.
     -- Vanilla's luggable template icon.
     carry_item = kind("carry_items", "default"),
     grimoire = kind("grimoires", "pocketable_default"),
@@ -112,6 +113,8 @@ local by_pickup = {
     container_01_luggable = kinds.carry_item,
     container_02_luggable = kinds.carry_item,
     container_03_luggable = kinds.carry_item,
+    control_rod_01_luggable = kinds.carry_item,
+    prismata_case_01_luggable = kinds.carry_item,
     grimoire = kinds.grimoire,
     tome = kinds.scripture,
 }

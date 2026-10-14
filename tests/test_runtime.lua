@@ -973,6 +973,32 @@ set_setting("show_carry_items", false)
 despawn(cell)
 frames(2)
 
+-- Cryonic rods and prismata cases share the option and the same pick-up-state check.
+local rod_state = { state = "sleep" }
+local rod = spawn(17, "luggable", { pickup_type = "control_rod_01_luggable" }, {
+    locomotion_system = { current_state = function()
+        return rod_state.state
+    end },
+})
+local case = spawn(18, "luggable", { pickup_type = "prismata_case_01_luggable" }, {
+    locomotion_system = { current_state = function()
+        return "sleep"
+    end },
+})
+
+frames(2)
+check(element:marker_for(rod) == nil and element:marker_for(case) == nil, "rods and cases off by default")
+set_setting("show_carry_items", true)
+frames(2)
+check(element:marker_for(rod) ~= nil and element:marker_for(case) ~= nil, "rods and cases shown once turned on")
+rod_state.state = "socket_lock"
+frames(2)
+check(element:marker_for(rod) == nil, "inserted rod has no marker")
+set_setting("show_carry_items", false)
+despawn(rod)
+despawn(case)
+frames(2)
+
 -- 13. While the HUD does not update (menu open, dead), nothing is added or rebuilt, and
 -- picked-up items still leave the registry.
 local live = #element:ours()
