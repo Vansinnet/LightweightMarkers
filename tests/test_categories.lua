@@ -91,7 +91,7 @@ for name, pickup in pairs(Pickups.by_name) do
             fail("%s is both marked and ignored", name)
         end
 
-        if kind.icon ~= vanilla_pickup_icon(pickup) then
+        if kind.icon ~= vanilla_pickup_icon(pickup) and not kind.own_icon then
             fail("%s: icon %s, vanilla shows %s", name, kind.icon, tostring(vanilla_pickup_icon(pickup)))
         end
 
@@ -137,6 +137,20 @@ end
 
 if Categories.classify(nil, "ammunition") ~= nil or Categories.classify(nil, nil) ~= nil then
     fail("an unknown interaction type was classified")
+end
+
+-- Charge counts are coloured for every charge a health station or a deployed ammo crate can have
+-- (HealthStationExtension.MAX_CHARGES and the crate's num_charges are 4).
+for charges = 0, 4 do
+    local color = Categories.charge_colors[charges]
+
+    if not color or #color ~= 4 then
+        fail("no charge colour for %d charges", charges)
+    end
+end
+
+if Pickups.by_name.ammo_cache_deployable.num_charges ~= 4 then
+    fail("deployed ammo crate no longer starts with 4 charges")
 end
 
 -- Every kind belongs to a group with a setting; every group has a kind.

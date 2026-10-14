@@ -601,9 +601,21 @@ check(station_marker.widget.content.ring == "content/ui/materials/hud/interactio
 check(math.abs(station_marker.widget.style.ring.size[1] - 57.6) < 1e-6, "station ring matches vanilla's larger frame")
 
 check(station_marker.widget.content.count == "3", "station shows 3 charges, got %s", tostring(station_marker.widget.content.count))
+
+local count_color = station_marker.widget.style.count.text_color
+
+check(count_color[2] == 255 and count_color[3] == 255 and count_color[4] == 30, "3 charges are yellow")
+
+for charges, rgb in pairs({ [4] = { 30, 255, 30 }, [2] = { 255, 150, 30 }, [1] = { 255, 30, 30 } }) do
+    station_state.charges = charges
+    frames(1)
+    check(count_color[2] == rgb[1] and count_color[3] == rgb[2] and count_color[4] == rgb[3], "%d charges colour", charges)
+end
+
 station_state.charges = 0
 frames(1)
 check(station_marker.widget.content.count == "0", "station shows 0 charges")
+check(count_color[2] == 255 and count_color[3] == 30, "0 charges are red")
 check(station_marker.lsm_dim < 1, "empty station is dimmed")
 check(station_marker.widget.alpha_multiplier < 0.5 and station_marker.widget.alpha_multiplier > 0.3, "empty station alpha %.2f", station_marker.widget.alpha_multiplier or -1)
 
@@ -638,7 +650,15 @@ check(element:marker_for(far) ~= nil, "re-added at 44 m")
 local far_marker = element:marker_for(far)
 
 check(far_marker.draw == false, "beyond 40 m the marker exists but is not drawn")
-check(far_marker.widget.style.icon.size[1] == ammo_marker.widget.style.icon.size[1], "large ammo looks like vanilla's (same size as small)")
+check(far_marker.widget.style.icon.size[1] == ammo_marker.widget.style.icon.size[1], "large ammo has vanilla's size (same as small)")
+check(far_marker.widget.content.icon == ICONS .. "resupply", "large ammo has its own icon")
+
+local vanilla_far = add_vanilla_marker(far)
+local vanilla_far_widget = { content = { icon = ICONS .. "ammunition" }, style = { icon = { color = { 255, 216, 237, 190 } } } }
+
+vanilla_far.template.update_function(element, nil, vanilla_far_widget, vanilla_far, vanilla_far.template)
+check(vanilla_far_widget.content.icon == ICONS .. "resupply", "vanilla's large ammo marker gets the same icon")
+check(vanilla_far_widget.style.icon.color[2] == 216, "and keeps vanilla's colour")
 
 -- 5. Opened chest: marker removed and never re-added.
 chest_state.open = true
@@ -703,6 +723,71 @@ local wait_before = yielding.raycast_frame_count
 
 frames(1)
 check(yielding.raycast_frame_count - wait_before == 0.5, "our raycast wait ages at half speed, got +%s", tostring(yielding.raycast_frame_count - wait_before))
+
+-- 8b. Deployed ammo crate: remaining charges from its game object, kept under vanilla's marker.
+local game_objects = {}
+
+GameSession = {
+    game_object_field = function(_, id, field)
+        return game_objects[id][field]
+    end,
+}
+Managers.state.game_session = {
+    game_session = function()
+        return game_objects
+    end,
+}
+Managers.state.unit_spawner = {
+    game_object_id = function(_, unit)
+        return unit.game_object_id
+    end,
+}
+
+local deployed = spawn(8, "ammunition", { pickup_type = "ammo_cache_deployable" }, {}, ICONS .. "pocketable_ammo")
+local carried = spawn(9, "pocketable", { pickup_type = "ammo_cache_pocketable" }, {}, ICONS .. "pocketable_ammo")
+
+deployed.game_object_id = 41
+carried.game_object_id = 42
+game_objects[41] = { charges = 4 }
+game_objects[42] = { charges = 1 }
+frames(2)
+
+local deployed_marker = element:marker_for(deployed)
+local crate_color = deployed_marker.widget.style.count.text_color
+
+check(deployed_marker.widget.content.count == "4", "deployed crate shows 4 charges, got %s", tostring(deployed_marker.widget.content.count))
+check(crate_color[2] == 30 and crate_color[3] == 255, "4 charges are green")
+check(element:marker_for(carried).widget.content.count == nil, "carried crate shows no charges")
+game_objects[41].charges = 2
+frames(1)
+check(deployed_marker.widget.content.count == "2" and crate_color[2] == 255 and crate_color[3] == 150, "2 charges, orange")
+
+local vanilla_crate = {
+    id = 7777,
+    draw = true,
+    widget = { alpha_multiplier = 1, visible = true, style = { ring = { size = { 96, 96 } } } },
+    template = {},
+    distance = 3,
+}
+
+element._markers_by_id[7777] = vanilla_crate
+hud.elements.HudElementInteraction = { _interaction_units = { [deployed] = { marker_id = 7777 }, [carried] = { marker_id = 7777 } } }
+frames(2)
+check(deployed_marker.draw == true, "deployed crate's count stays under vanilla's marker")
+check(deployed_marker.widget.style.ring.color[1] == 0 and deployed_marker.widget.style.icon.color[1] == 0, "its ring and icon give way to vanilla's")
+check(deployed_marker.widget.style.count.offset[1] == 96 * 0.5 + 6, "count sits beside vanilla's ring, got %s", tostring(deployed_marker.widget.style.count.offset[1]))
+check(element:marker_for(carried).draw == false, "carried crate yields as usual")
+check(element:marker_for(station) == nil or element:marker_for(station).lsm_keep_count == false, "health stations do not keep their count")
+deployed.game_object_id = nil
+frames(1)
+check(deployed_marker.widget.content.count == nil and deployed_marker.draw == false, "no count once its game object is gone; yields")
+-- The game object goes away only when the crate is removed.
+element._markers_by_id[7777] = nil
+hud.elements.HudElementInteraction = nil
+despawn(deployed)
+despawn(carried)
+frames(2)
+check(element:marker_for(deployed) == nil, "used-up crate has no marker")
 
 -- 9. Category toggle.
 set_setting("show_stimms", false)

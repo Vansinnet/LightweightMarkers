@@ -46,6 +46,7 @@ for _, name in ipairs(CHEST_ITEMS) do
     ITEM_LABELS[name] = mod:localize("chest_item_" .. name)
 end
 
+local CHARGE_COLORS = Categories.charge_colors
 local COUNT_TEXT = {}
 
 for charges = 0, 9 do
@@ -136,6 +137,8 @@ end
 -- distance. Each marker has its own template copy (hud_element_world_markers.lua,
 -- _template_by_type), so the update is wrapped per marker with a plain call instead of a DMF hook,
 -- which would allocate and xpcall every frame for every interaction marker.
+-- Vanilla's update also resets the icon to the interactee's own every frame (update_function), so a
+-- kind with its own icon writes it back the same way.
 local function recolored_update(parent, ui_renderer, widget, marker, template, dt, t)
     local animating = marker.lsm_vanilla_update(parent, ui_renderer, widget, marker, template, dt, t)
     local i = index_of[marker.unit]
@@ -146,6 +149,10 @@ local function recolored_update(parent, ui_renderer, widget, marker, template, d
         local color = kind.color
 
         icon_color[1], icon_color[2], icon_color[3], icon_color[4] = color[1], color[2], color[3], color[4]
+    end
+
+    if kind and kind.own_icon then
+        widget.content.icon = kind.icon
     end
 
     return animating
@@ -325,8 +332,9 @@ local function reset_prediction()
 end
 
 local function add_marker(unit, kind)
-    -- Vanilla's own icon for this unit, including level overrides; the kind's icon otherwise.
-    local interactee = ScriptUnit.has_extension(unit, "interactee_system")
+    -- Vanilla's own icon for this unit, including level overrides, unless the kind has its own;
+    -- the kind's icon otherwise.
+    local interactee = not kind.own_icon and ScriptUnit.has_extension(unit, "interactee_system")
     local icon = interactee and interactee:interaction_icon() or kind.icon
     local contents = kind.chest and prediction.contents and prediction.contents[unit] or nil
 
@@ -358,14 +366,42 @@ local function remove_all_markers()
     table.clear(marker_by_unit)
 end
 
-local function refresh_charges(unit, marker)
-    local station = ScriptUnit.has_extension(unit, "health_station_system")
-    local charges = station and station:charge_amount()
+-- A health station's charges are synced to clients (health_station_system.lua,
+-- rpc_health_station_sync_charges). A pickup's remaining charges are a field of its game object that
+-- the server lowers on each use (pickup_interaction.lua, _use_charge); the unit spawner drops the
+-- unit's id when that object is destroyed (unit_spawner_manager.lua, destroy_game_object_unit).
+local function charge_amount(unit, source)
+    if source == "health_station" then
+        local station = ScriptUnit.has_extension(unit, "health_station_system")
+
+        return station and station:charge_amount()
+    end
+
+    local state_managers = Managers.state
+    local game_session_manager = state_managers.game_session
+    local unit_spawner = state_managers.unit_spawner
+    local game_session = game_session_manager and game_session_manager:game_session()
+    local game_object_id = game_session and unit_spawner and unit_spawner:game_object_id(unit)
+
+    return game_object_id and GameSession.game_object_field(game_session, game_object_id, "charges") or nil
+end
+
+local function refresh_charges(unit, marker, source)
+    local charges = charge_amount(unit, source)
 
     if charges ~= marker.lsm_charges then
+        local widget = marker.widget
+        local color = charges and CHARGE_COLORS[charges]
+
         marker.lsm_charges = charges
-        marker.widget.content.count = charges and (COUNT_TEXT[charges] or tostring(charges)) or nil
+        widget.content.count = charges and (COUNT_TEXT[charges] or tostring(charges)) or nil
         marker.lsm_dim = charges == 0 and EMPTY_STATION_ALPHA or 1
+
+        if color then
+            local text_color = widget.style.count.text_color
+
+            text_color[1], text_color[2], text_color[3], text_color[4] = color[1], color[2], color[3], color[4]
+        end
     end
 end
 
@@ -554,7 +590,7 @@ local function sweep()
                 end
 
                 if marker and kind.charges then
-                    refresh_charges(unit, marker)
+                    refresh_charges(unit, marker, kind.charges)
                 end
             elseif marker then
                 remove_marker(unit)

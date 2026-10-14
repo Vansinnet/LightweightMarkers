@@ -11,6 +11,8 @@ local POWER_RED = { 255, 255, 30, 30 }
 local SPEED_BLUE = { 255, 30, 150, 255 }
 local CONCENTRATION_YELLOW = { 255, 255, 255, 30 }
 local MATERIAL_LIGHT_BLUE = { 255, 140, 200, 255 }
+local PLASTEEL_LIGHT_ORANGE = { 255, 255, 190, 120 }
+local CHARGES_ORANGE = { 255, 255, 150, 30 }
 
 -- Pickups float 0.8 m above their marker node like vanilla "pickup" interaction markers; chests and
 -- health stations sit on it ("default" and "point_of_interest" visuals in
@@ -37,12 +39,14 @@ end
 -- (for example on a chest) also matches vanilla.
 -- Every kind looks like vanilla's interaction marker for it at the hand-over distance (same icon,
 -- frame and size), so the switch to vanilla's marker up close is invisible. Kinds with their own
--- colour give vanilla's marker that colour too; heretical idols, which vanilla never marks, have
--- their own look.
+-- colour give vanilla's marker that colour too, and large ammo gives it its own icon; heretical
+-- idols, which vanilla never marks, have their own look.
 local kinds = {
     ammo_small = kind("ammo", "ammunition"),
-    ammo_large = kind("ammo", "ammunition"),
+    -- Vanilla shows large ammo like small ammo; this is the game's objective resupply icon.
+    ammo_large = kind("ammo", "resupply"),
     ammo_crate = kind("ammo", "pocketable_ammo"),
+    ammo_crate_deployed = kind("ammo", "pocketable_ammo"),
     grenade = kind("grenades", "grenade"),
     medical_crate = kind("medical", "pocketable_medkit"),
     stimm_medical = kind("stimms", "pocketable_syringe_corruption", MEDICAL_GREEN),
@@ -51,8 +55,8 @@ local kinds = {
     stimm_concentration = kind("stimms", "pocketable_syringe_ability", CONCENTRATION_YELLOW),
     health_station = kind("health_stations", "respawn", MEDICAL_GREEN, nil, NO_OFFSET),
     chest = kind("chests", "default", nil, nil, NO_OFFSET),
-    plasteel_small = kind("plasteel", "environment_generic", MATERIAL_LIGHT_BLUE),
-    plasteel_large = kind("plasteel", "environment_generic", MATERIAL_LIGHT_BLUE),
+    plasteel_small = kind("plasteel", "environment_generic", PLASTEEL_LIGHT_ORANGE),
+    plasteel_large = kind("plasteel", "environment_generic", PLASTEEL_LIGHT_ORANGE),
     diamantine_small = kind("diamantine", "environment_generic", MATERIAL_LIGHT_BLUE),
     diamantine_large = kind("diamantine", "environment_generic", MATERIAL_LIGHT_BLUE),
     -- Two-handed items carried to a socket: power cells for medicae stations
@@ -68,7 +72,14 @@ local kinds = {
 -- Health stations use vanilla's larger "point_of_interest" frame; everything else the standard one.
 kinds.health_station.frame = "point_of_interest"
 
-kinds.health_station.charges = true
+-- Remaining charges as a number: a health station's synced charge amount, a deployed ammo crate's
+-- pickup charges (4 when deployed). The crate is tagged when deployed, which keeps vanilla's marker
+-- on it, so its count stays while vanilla's marker shows it.
+kinds.health_station.charges = "health_station"
+kinds.ammo_crate_deployed.charges = "pickup"
+kinds.ammo_crate_deployed.keep_count = true
+-- The kind's icon replaces vanilla's, on our marker and on vanilla's.
+kinds.ammo_large.own_icon = true
 kinds.chest.chest = true
 kinds.carry_item.luggable = true
 kinds.heretical_idol.idol = true
@@ -82,7 +93,7 @@ local by_pickup = {
     small_clip = kinds.ammo_small,
     large_clip = kinds.ammo_large,
     ammo_cache_pocketable = kinds.ammo_crate,
-    ammo_cache_deployable = kinds.ammo_crate,
+    ammo_cache_deployable = kinds.ammo_crate_deployed,
     large_ammunition_crate = kinds.ammo_crate,
     small_grenade = kinds.grenade,
     medical_crate_pocketable = kinds.medical_crate,
@@ -127,8 +138,18 @@ local group_settings = {
     heretical_idols = "show_heretical_idols",
 }
 
+-- Text colour of a charge count: 4 green, 3 yellow, 2 orange, 1 and 0 red.
+local charge_colors = {
+    [0] = POWER_RED,
+    POWER_RED,
+    CHARGES_ORANGE,
+    CONCENTRATION_YELLOW,
+    MEDICAL_GREEN,
+}
+
 local Categories = {
     kinds = kinds,
+    charge_colors = charge_colors,
     by_pickup = by_pickup,
     by_interaction = by_interaction,
     group_settings = group_settings,
