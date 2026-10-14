@@ -31,11 +31,6 @@ local RING_SIZE = FRAMES.standard.ring_size
 local ICON_SIZE = FRAMES.standard.icon_size
 local LABEL_FONT_SIZE = 15
 local COUNT_FONT_SIZE = 18
-local CONTENTS_FONT_SIZE = 16
-local CONTENTS_WIDTH = 360
-local CONTENTS_HEIGHT = 24
--- From the top of the visible ring to the centre of the predicted-contents text box.
-local CONTENTS_LIFT = 16
 local BACKGROUND_ALPHA = 200
 -- Charge counts sit to the upper right of the ring.
 local COUNT_GAP = 6
@@ -173,27 +168,6 @@ return function(ctx)
                     return content.count ~= nil
                 end,
             },
-            {
-                pass_type = "text",
-                style_id = "contents",
-                value_id = "contents",
-                value = "",
-                style = {
-                    font_type = "proxima_nova_bold",
-                    font_size = CONTENTS_FONT_SIZE,
-                    drop_shadow = true,
-                    horizontal_alignment = "center",
-                    vertical_alignment = "center",
-                    text_horizontal_alignment = "center",
-                    text_vertical_alignment = "center",
-                    size = { CONTENTS_WIDTH, CONTENTS_HEIGHT },
-                    offset = { 0, -RING_SIZE * 0.5 - CONTENTS_LIFT, 4 },
-                    text_color = { 255, 255, 255, 255 },
-                },
-                visibility_function = function(content)
-                    return content.contents ~= nil
-                end,
-            },
         }, scenegraph_id)
     end
 
@@ -253,19 +227,9 @@ return function(ctx)
         marker.lsm_count_gap = count_gap
         marker.lsm_keep_count = kind.keep_count == true
 
-        local contents = style.contents
-        local lift = CONTENTS_LIFT * config.marker_scale
-
-        contents.font_size = CONTENTS_FONT_SIZE * config.marker_scale
-        contents.size[1] = CONTENTS_WIDTH * config.marker_scale
-        contents.size[2] = CONTENTS_HEIGHT * config.marker_scale
-        contents.offset[2] = -(ring_size * 0.5 + lift)
-        marker.lsm_contents_lift = lift
-
         content.icon = marker.data.icon
         content.label = nil
         content.count = nil
-        content.contents = marker.data.contents
         content.line_of_sight_progress = check_line_of_sight and 0 or 1
         marker.lsm_ring_size = ring_size
         marker.lsm_icon_alpha = color[1]
@@ -323,21 +287,19 @@ return function(ctx)
         local check_line_of_sight = marker.lsm_check_line_of_sight
         local vanilla, vanilla_widget = vanilla_alpha(element, marker.unit)
         local yielded = vanilla >= FULL_YIELD
-        local contents = content.contents
         local keep_count = marker.lsm_keep_count and content.count ~= nil
-        local keeps_text = contents or keep_count
 
         if yielded then
             -- Vanilla's marker shows the item (in line of sight, or tagged), so ours takes no
-            -- raycasts until vanilla's stops showing, and is hidden unless it keeps text: predicted
-            -- contents or a deployed crate's charges.
+            -- raycasts until vanilla's stops showing, and is hidden unless it keeps its count (a
+            -- deployed crate).
             if check_line_of_sight then
                 self.check_line_of_sight = false
                 marker.raycast_result = false
                 content.line_of_sight_progress = 1
             end
 
-            if not keeps_text then
+            if not keep_count then
                 marker.draw = false
 
                 return
@@ -370,9 +332,9 @@ return function(ctx)
 
         local alpha = line_of_sight * marker.lsm_dim
 
-        if keeps_text then
-            -- The text stays while vanilla's marker takes over: only the ring, its background and
-            -- the icon fade, and the text sits beside the larger of the two rings.
+        if keep_count then
+            -- The count stays while vanilla's marker takes over: only the ring, its background and
+            -- the icon fade, and the count sits beside the larger of the two rings.
             local style = widget.style
             local own = 1 - vanilla
             local top = marker.lsm_ring_size
@@ -387,16 +349,10 @@ return function(ctx)
                 top = math_max(top, vanilla_ring.size[2])
             end
 
-            if contents then
-                style.contents.offset[2] = -(top * 0.5 + marker.lsm_contents_lift)
-            end
+            local offset = style.count.offset
 
-            if keep_count then
-                local offset = style.count.offset
-
-                offset[1] = top * 0.5 + marker.lsm_count_gap
-                offset[2] = -top * 0.25
-            end
+            offset[1] = top * 0.5 + marker.lsm_count_gap
+            offset[2] = -top * 0.25
         else
             alpha = alpha * (1 - vanilla)
         end
