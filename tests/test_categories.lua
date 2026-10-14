@@ -149,6 +149,29 @@ for charges = 0, 4 do
     end
 end
 
+-- HUD stimm colours: each stimm pickup's inventory item has its marker's colour.
+local num_stimm_items = 0
+
+for name, kind in pairs(Categories.by_pickup) do
+    if kind.group == "stimms" then
+        local item = Pickups.by_name[name].inventory_item
+
+        num_stimm_items = num_stimm_items + 1
+
+        if Categories.stimm_colors[item] ~= kind.color then
+            fail("stimm %s: HUD colour of %s differs from its marker colour", name, tostring(item))
+        end
+    end
+end
+
+for _ in pairs(Categories.stimm_colors) do
+    num_stimm_items = num_stimm_items - 1
+end
+
+if num_stimm_items ~= 0 then
+    fail("stimm_colors has items that are not marked stimms")
+end
+
 if Pickups.by_name.ammo_cache_deployable.num_charges ~= 4 then
     fail("deployed ammo crate no longer starts with 4 charges")
 end

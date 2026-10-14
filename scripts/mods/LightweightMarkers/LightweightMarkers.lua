@@ -651,6 +651,78 @@ local function unregister()
     state.interaction_units = nil
 end
 
+-- Stimm icons in the HUD take the stimm's colour. The player's own stimm slot blends its icon
+-- colour from the icon style's default_color every frame (hud_element_player_weapon.lua,
+-- set_wield_anim_progress), so writing that once when the slot is created colours it. Teammates'
+-- panels set their stimm icon only when it changes (hud_element_player_panel_base.lua,
+-- _update_pocketable_presentation). Only RGB is written; the game animates alpha. Each tinted colour
+-- table keeps its original here, so disabling restores it exactly.
+local STIMM_COLORS = Categories.stimm_colors
+local tinted = setmetatable({}, { __mode = "k" })
+
+local function tint(color, rgb)
+    local original = tinted[color]
+
+    if rgb then
+        if not original then
+            tinted[color] = { color[2], color[3], color[4] }
+        end
+
+        color[2], color[3], color[4] = rgb[2], rgb[3], rgb[4]
+    elseif original then
+        color[2], color[3], color[4] = original[1], original[2], original[3]
+        tinted[color] = nil
+    end
+end
+
+local function tint_weapon(weapon, enabled)
+    tint(weapon._widgets_by_name.icon.style.icon.default_color, enabled and STIMM_COLORS[weapon._weapon_name] or nil)
+end
+
+-- The panel caches its player's extensions just before it updates its pocketables
+-- (_update_player_features, _player_extensions).
+local function tint_panel(panel, enabled)
+    local widget = panel._widgets_by_name.pocketable_small
+    local extensions = panel._extensions
+    local unit_data = enabled and extensions and extensions.unit_data
+    local item = unit_data and unit_data:read_component("inventory").slot_pocketable_small
+
+    if widget then
+        tint(widget.style.texture.color, item and STIMM_COLORS[item] or nil)
+        widget.dirty = true
+    end
+end
+
+local function tint_hud(enabled)
+    local ui_manager = Managers.ui
+    local hud = ui_manager and ui_manager:get_hud()
+    local weapon_handler = hud and hud:element("HudElementPlayerWeaponHandler")
+    local panel_handler = hud and hud:element("HudElementTeamPanelHandler")
+    local weapons = weapon_handler and weapon_handler._player_weapons
+    local panels = panel_handler and panel_handler._player_panels_array
+
+    if weapons then
+        for _, data in pairs(weapons) do
+            tint_weapon(data.hud_element_player_weapon, enabled)
+        end
+    end
+
+    if panels then
+        for i = 1, #panels do
+            tint_panel(panels[i].panel, enabled)
+        end
+    end
+end
+
+mod:hook_safe("HudElementPlayerWeapon", "init", function(self)
+    tint_weapon(self, true)
+end)
+
+-- The concrete class: class() copied the base method into it at load.
+mod:hook_safe("HudElementTeamPlayerPanel", "_update_pocketable_presentation", function(self)
+    tint_panel(self, true)
+end)
+
 local function current_element()
     local ui_manager = Managers.ui
     local hud = ui_manager and ui_manager:get_hud()
@@ -679,12 +751,14 @@ mod.on_enabled = function()
         wrap_all_vanilla(element)
     end
 
+    tint_hud(true)
     sweep_timer = SWEEP_INTERVAL
     mod.update = update
 end
 
 mod.on_disabled = function()
     mod.update = nil
+    tint_hud(false)
     remove_all_markers()
     unwrap_vanilla(state.element)
     unregister()
@@ -699,6 +773,7 @@ mod.on_unload = function(exit_game)
         return
     end
 
+    tint_hud(false)
     remove_all_markers()
     unwrap_vanilla(state.element)
     unregister()

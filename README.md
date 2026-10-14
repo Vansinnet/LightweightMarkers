@@ -25,7 +25,7 @@ It is built to cost as little as possible:
 | Grimoires and scriptures (off by default) | The game's side-mission item icon | |
 | Heretical idols (off by default) | The game's priority-target icon | Only the idols the mission actually uses; removed once destroyed |
 
-Stimms are coloured by type (medical green, power red, speed blue, concentration yellow), health stations green like the medical stimm, plasteel light orange and diamantine light blue. Charge counts are green at 4, yellow at 3, orange at 2 and red at 1. Everything else uses the game's colour.
+Stimms are coloured by type (medical green, power red, speed blue, concentration yellow), health stations green like the medical stimm, plasteel light orange and diamantine light blue. Charge counts are green at 4, yellow at 3, orange at 2 and red at 1. Stimm icons in the HUD, in your own slots and on teammates' panels, take the same stimm colours. Everything else uses the game's colour.
 
 Within about 15 m the game shows its own marker for the same item. This mod's marker then fades out, so there is never a double icon, and tags and the interaction prompt look as usual. Markers use the game's frame and size at that distance, and the game's marker gets the same colour, so the hand-over is not visible and an item keeps its colour at every distance. Large ammo has its own icon, on the game's marker too; otherwise, like the game's own markers, small and large amounts of the same item look alike.
 
