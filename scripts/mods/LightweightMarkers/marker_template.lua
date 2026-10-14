@@ -31,6 +31,12 @@ local RING_SIZE = FRAMES.standard.ring_size
 local ICON_SIZE = FRAMES.standard.icon_size
 local LABEL_FONT_SIZE = 15
 local COUNT_FONT_SIZE = 18
+local CONTENTS_FONT_SIZE = 16
+local CONTENTS_WIDTH = 360
+local CONTENTS_HEIGHT = 24
+-- From the top of the visible ring to the centre of the predicted-contents text box.
+local CONTENTS_LIFT = 16
+local BACKGROUND_ALPHA = 200
 -- Health station charges sit to the upper right of the ring.
 local COUNT_GAP = 6
 local LINE_OF_SIGHT_SPEED = 8
@@ -96,7 +102,7 @@ return function(ctx)
                     vertical_alignment = "center",
                     size = { RING_SIZE, RING_SIZE },
                     offset = { 0, 0, 1 },
-                    color = { 200, 49, 56, 49 },
+                    color = { BACKGROUND_ALPHA, 49, 56, 49 },
                 },
             },
             {
@@ -167,6 +173,27 @@ return function(ctx)
                     return content.count ~= nil
                 end,
             },
+            {
+                pass_type = "text",
+                style_id = "contents",
+                value_id = "contents",
+                value = "",
+                style = {
+                    font_type = "proxima_nova_bold",
+                    font_size = CONTENTS_FONT_SIZE,
+                    drop_shadow = true,
+                    horizontal_alignment = "center",
+                    vertical_alignment = "center",
+                    text_horizontal_alignment = "center",
+                    text_vertical_alignment = "center",
+                    size = { CONTENTS_WIDTH, CONTENTS_HEIGHT },
+                    offset = { 0, -RING_SIZE * 0.5 - CONTENTS_LIFT, 4 },
+                    text_color = { 255, 255, 255, 255 },
+                },
+                visibility_function = function(content)
+                    return content.contents ~= nil
+                end,
+            },
         }, scenegraph_id)
     end
 
@@ -223,10 +250,22 @@ return function(ctx)
         count.offset[1] = ring_size * 0.5 + COUNT_GAP * config.marker_scale
         count.offset[2] = -ring_size * 0.25
 
+        local contents = style.contents
+        local lift = CONTENTS_LIFT * config.marker_scale
+
+        contents.font_size = CONTENTS_FONT_SIZE * config.marker_scale
+        contents.size[1] = CONTENTS_WIDTH * config.marker_scale
+        contents.size[2] = CONTENTS_HEIGHT * config.marker_scale
+        contents.offset[2] = -(ring_size * 0.5 + lift)
+        marker.lsm_contents_lift = lift
+
         content.icon = marker.data.icon
         content.label = nil
         content.count = nil
+        content.contents = marker.data.contents
         content.line_of_sight_progress = check_line_of_sight and 0 or 1
+        marker.lsm_ring_size = ring_size
+        marker.lsm_icon_alpha = color[1]
 
         self.position_offset = kind.offset
         self.size[1], self.size[2] = ring_size, ring_size
@@ -243,7 +282,7 @@ return function(ctx)
     end
 
     -- Alpha of vanilla's interaction marker for the same unit, as _draw_markers will draw it:
-    -- its line-of-sight alpha (set by its own update_function) times its distance fade.
+    -- its line-of-sight alpha (set by its own update_function) times its distance fade; and its widget.
     local function vanilla_alpha(element, unit)
         local interaction_units = state.interaction_units
         local entry = interaction_units and interaction_units[unit]
@@ -267,7 +306,7 @@ return function(ctx)
             alpha = alpha * element:_get_fade(fade_settings, vanilla.distance)
         end
 
-        return alpha
+        return alpha, widget
     end
 
     -- Runs after the HUD decided `draw` for this frame and before drawing
@@ -279,25 +318,29 @@ return function(ctx)
 
         local content = widget.content
         local check_line_of_sight = marker.lsm_check_line_of_sight
-        local vanilla = vanilla_alpha(element, marker.unit)
+        local vanilla, vanilla_widget = vanilla_alpha(element, marker.unit)
+        local yielded = vanilla >= FULL_YIELD
+        local contents = content.contents
 
-        if vanilla >= FULL_YIELD then
-            -- Vanilla's marker shows the item (in line of sight, or tagged), so ours stays hidden
-            -- and takes no raycasts until vanilla's stops showing.
+        if yielded then
+            -- Vanilla's marker shows the item (in line of sight, or tagged), so ours takes no
+            -- raycasts until vanilla's stops showing, and is hidden unless it has predicted contents.
             if check_line_of_sight then
                 self.check_line_of_sight = false
                 marker.raycast_result = false
                 content.line_of_sight_progress = 1
             end
 
-            marker.draw = false
+            if not contents then
+                marker.draw = false
 
-            return
+                return
+            end
         end
 
         local line_of_sight = 1
 
-        if check_line_of_sight then
+        if check_line_of_sight and not yielded then
             self.check_line_of_sight = true
 
             local raycast_frame_count = marker.raycast_frame_count
@@ -319,7 +362,29 @@ return function(ctx)
             end
         end
 
-        local alpha = line_of_sight * marker.lsm_dim * (1 - vanilla)
+        local alpha = line_of_sight * marker.lsm_dim
+
+        if contents then
+            -- The predicted contents stay while vanilla's marker takes over: only the ring, its
+            -- background and the icon fade, and the text sits above the larger of the two rings.
+            local style = widget.style
+            local own = 1 - vanilla
+            local top = marker.lsm_ring_size
+            local vanilla_style = vanilla > 0 and vanilla_widget and vanilla_widget.style
+            local vanilla_ring = vanilla_style and vanilla_style.ring
+
+            style.background.color[1] = BACKGROUND_ALPHA * own
+            style.ring.color[1] = 255 * own
+            style.icon.color[1] = marker.lsm_icon_alpha * own
+
+            if vanilla_ring then
+                top = math_max(top, vanilla_ring.size[2])
+            end
+
+            style.contents.offset[2] = -(top * 0.5 + marker.lsm_contents_lift)
+        else
+            alpha = alpha * (1 - vanilla)
+        end
 
         if alpha <= MIN_ALPHA then
             -- Hidden markers are not drawn at all.
@@ -330,7 +395,7 @@ return function(ctx)
 
         widget.alpha_multiplier = alpha
 
-        if config.show_distance then
+        if config.show_distance and not yielded then
             local metres = math_floor(marker.distance)
 
             if metres ~= marker.lsm_metres then

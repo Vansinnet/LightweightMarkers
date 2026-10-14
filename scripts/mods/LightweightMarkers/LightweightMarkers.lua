@@ -13,6 +13,14 @@ local function load(name)
 end
 
 local Categories = load("categories")
+local PickupSettings = require("scripts/settings/pickup/pickup_settings")
+-- The game's own RNG and selectors, so the replay draws exactly what the server drew.
+local ChestPrediction = load("chest_prediction")({
+    next_random = math.next_random,
+    shuffle = table.shuffle,
+    selectors = PickupSettings.pickup_selector,
+    pool_values = PickupSettings.pickup_pool_value,
+})
 
 -- Named after the ModID so a renamed copy of the mod never shares (and removes) this template.
 local TEMPLATE_NAME = mod:get_name() .. "_marker"
@@ -23,6 +31,20 @@ local SWEEP_INTERVAL = 0.25
 local ADD_MARGIN = 5
 local KEEP_MARGIN = 10
 local EMPTY_STATION_ALPHA = 0.45
+-- Chest prediction starts this long after the first sweep that sees the player's HUD, so the floor
+-- pickups have reached the client, and then runs this much solver work per frame.
+local PREDICTION_DELAY = 2
+local PREDICTION_BUDGET_MS = 2
+local CHEST_ITEMS = {
+    "small_clip", "large_clip", "ammo_cache_pocketable", "small_grenade", "small_metal", "large_metal",
+    "small_platinum", "large_platinum", "syringe_corruption_pocketable", "syringe_ability_boost_pocketable",
+    "syringe_power_boost_pocketable", "syringe_speed_boost_pocketable", "medical_crate_pocketable",
+}
+local ITEM_LABELS = {}
+
+for _, name in ipairs(CHEST_ITEMS) do
+    ITEM_LABELS[name] = mod:localize("chest_item_" .. name)
+end
 
 local COUNT_TEXT = {}
 
@@ -57,6 +79,8 @@ local function refresh_config()
     for group, setting_id in pairs(Categories.group_settings) do
         config.group_enabled[group] = mod:get(setting_id) ~= false
     end
+
+    config.predict_chests = mod:get("predict_chest_contents") == true and config.group_enabled.chests
 end
 
 refresh_config()
@@ -279,15 +303,38 @@ local function seed()
     end
 end
 
+-- Chest prediction for the current mission (chest_prediction.lua): once per PickupSystem instance, a
+-- snapshot a little after spawning in, then the solver spread over frames. contents maps a chest unit
+-- to its label.
+local prediction = {
+    system = nil,
+    wait = 0,
+    done = false,
+    routine = nil,
+    snapshot = nil,
+    contents = nil,
+}
+
+local function reset_prediction()
+    prediction.system = nil
+    prediction.wait = 0
+    prediction.done = false
+    prediction.routine = nil
+    prediction.snapshot = nil
+    prediction.contents = nil
+end
+
 local function add_marker(unit, kind)
     -- Vanilla's own icon for this unit, including level overrides; the kind's icon otherwise.
     local interactee = ScriptUnit.has_extension(unit, "interactee_system")
     local icon = interactee and interactee:interaction_icon() or kind.icon
+    local contents = kind.chest and prediction.contents and prediction.contents[unit] or nil
 
     -- on_enter runs synchronously inside the trigger and records the marker in marker_by_unit.
     Managers.event:trigger("add_world_marker_unit", TEMPLATE_NAME, unit, nil, {
         kind = kind,
         icon = icon,
+        contents = contents,
     })
 end
 
@@ -319,6 +366,90 @@ local function refresh_charges(unit, marker)
         marker.lsm_charges = charges
         marker.widget.content.count = charges and (COUNT_TEXT[charges] or tostring(charges)) or nil
         marker.lsm_dim = charges == 0 and EMPTY_STATION_ALPHA or 1
+    end
+end
+
+local function apply_prediction(result)
+    local contents = {}
+    local chests = 0
+
+    for unit, names in pairs(result.chests) do
+        local labels = {}
+
+        for i, name in ipairs(names) do
+            labels[i] = ITEM_LABELS[name] or name
+        end
+
+        contents[unit] = table.concat(labels, " + ")
+        chests = chests + 1
+    end
+
+    prediction.contents = contents
+    mod:info("chest prediction: %d chests, %d floor pickups confirmed, %d candidates, %d simulations", chests,
+        result.matched, result.candidates, result.simulations)
+
+    -- Chest markers take their contents in on_enter; the next sweep rebuilds them.
+    for unit in pairs(contents) do
+        remove_marker(unit)
+    end
+end
+
+-- Resumes the solver until this frame's budget is used, timed with the performance counter the game
+-- uses for its own time slicing (game_states/game/utilities/gameplay_init_time_slice.lua:9-35).
+local function step_prediction()
+    local routine = prediction.routine
+
+    if not routine then
+        return
+    end
+
+    local counter = Application.query_performance_counter()
+
+    repeat
+        local ok, result, reason = coroutine.resume(routine, prediction.snapshot, coroutine.yield)
+
+        if coroutine.status(routine) == "dead" then
+            prediction.routine = nil
+            prediction.snapshot = nil
+
+            if not ok then
+                mod:warning("chest prediction failed: %s", tostring(result))
+            elseif result then
+                apply_prediction(result)
+            else
+                mod:info("chest prediction: nothing shown (%s)", tostring(reason))
+            end
+
+            return
+        end
+    until Application.time_since_query(counter) > PREDICTION_BUDGET_MS
+end
+
+-- Called from the sweep while the player's HUD runs; starts the solver once per mission.
+local function prediction_tick()
+    local extension_manager = Managers.state and Managers.state.extension
+    local pickup_system = extension_manager and extension_manager:system("pickup_system")
+
+    if pickup_system ~= prediction.system then
+        reset_prediction()
+        prediction.system = pickup_system
+    end
+
+    if not pickup_system or prediction.done then
+        return
+    end
+
+    prediction.wait = prediction.wait + SWEEP_INTERVAL
+
+    if prediction.wait < PREDICTION_DELAY then
+        return
+    end
+
+    prediction.done = true
+    prediction.snapshot = ChestPrediction.capture()
+
+    if prediction.snapshot then
+        prediction.routine = coroutine.create(ChestPrediction.solve)
     end
 end
 
@@ -362,6 +493,10 @@ local function sweep()
         purge_dead(ALIVE)
 
         return
+    end
+
+    if config.predict_chests then
+        prediction_tick()
     end
 
     local hud = element._parent
@@ -437,6 +572,10 @@ end
 local sweep_timer = 0
 
 local function update(dt)
+    if prediction.routine then
+        step_prediction()
+    end
+
     sweep_timer = sweep_timer + dt
 
     if sweep_timer < SWEEP_INTERVAL then
@@ -514,6 +653,7 @@ mod.on_disabled = function()
     unwrap_vanilla(state.element)
     unregister()
     clear_registry()
+    reset_prediction()
 end
 
 mod.on_unload = function(exit_game)
@@ -527,6 +667,7 @@ mod.on_unload = function(exit_game)
     unwrap_vanilla(state.element)
     unregister()
     clear_registry()
+    reset_prediction()
 end
 
 mod.on_setting_changed = function()
@@ -534,6 +675,10 @@ mod.on_setting_changed = function()
     -- Markers take their settings in on_enter; the next sweep rebuilds them. The registry is rebuilt
     -- too, since it holds only the groups that are on.
     remove_all_markers()
+
+    if not config.predict_chests then
+        reset_prediction()
+    end
 
     if mod.update then
         seed()
@@ -546,5 +691,6 @@ mod.on_game_state_changed = function(status, state_name)
     if status == "exit" and state_name == "StateGameplay" then
         remove_all_markers()
         clear_registry()
+        reset_prediction()
     end
 end
