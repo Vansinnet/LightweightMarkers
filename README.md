@@ -23,7 +23,7 @@ It is built to cost as little as possible:
 | Plasteel and diamantine (off by default) | The game's material icon | |
 | Power cells and containers (off by default) | The game's pickup icon | Power cells for medicae stations (often hidden in the level) and objectives, and containers some missions ask you to carry to a drop-off point; hidden while carried, plugged in or delivered |
 | Grimoires and scriptures (off by default) | The game's side-mission item icon | |
-| Heretical idols (off by default) | The game's priority-target icon | Only the idols the mission actually uses; removed once destroyed |
+| Heretical idols (off by default) | The game's enemy icon in a point-of-interest frame, as in Markers Improved AIO | Only the idols the mission actually uses; removed once destroyed |
 
 Stimms are coloured by type (medical green, power red, speed blue, concentration yellow), health stations green like the medical stimm, plasteel light orange and diamantine light blue. Charge counts are green at 4, yellow at 3, orange at 2 and red at 1. Stimm icons in the HUD, in your own slots and on teammates' panels, take the same stimm colours. Everything else uses the game's colour.
 

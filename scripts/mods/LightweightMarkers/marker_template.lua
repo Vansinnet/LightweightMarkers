@@ -26,6 +26,16 @@ local FRAMES = {
         background_size = 128 * HANDOVER_SCALE,
         icon_size = 72 * HANDOVER_SCALE,
     },
+    -- Heretical idols, which vanilla never marks: Markers Improved AIO's idol frame (equal ring and
+    -- background, icon at half their size, "Tarnished" ring), at our point-of-interest size.
+    idol = {
+        background = "content/ui/materials/hud/interactions/frames/point_of_interest_back",
+        ring = "content/ui/materials/hud/interactions/frames/point_of_interest_top",
+        ring_color = { 255, 130, 115, 102 },
+        ring_size = 144 * HANDOVER_SCALE,
+        background_size = 144 * HANDOVER_SCALE,
+        icon_size = 72 * HANDOVER_SCALE,
+    },
 }
 local RING_SIZE = FRAMES.standard.ring_size
 local ICON_SIZE = FRAMES.standard.icon_size
@@ -207,6 +217,14 @@ return function(ctx)
         scale_pass(style.background, frame.background_size, scale)
         scale_pass(style.ring, frame.ring_size, scale)
         scale_pass(style.icon, frame.icon_size, scale)
+
+        local ring_color = frame.ring_color
+
+        if ring_color then
+            local color = style.ring.color
+
+            color[1], color[2], color[3], color[4] = ring_color[1], ring_color[2], ring_color[3], ring_color[4]
+        end
 
         local icon_color = style.icon.color
         local color = kind.color
