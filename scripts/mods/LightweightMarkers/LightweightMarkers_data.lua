@@ -42,6 +42,7 @@ return {
                     checkbox("show_stimms", true),
                     checkbox("show_health_stations", true),
                     checkbox("show_chests", true),
+                    checkbox("predict_chest_contents", false),
                 },
             },
             {

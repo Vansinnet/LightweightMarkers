@@ -94,6 +94,59 @@ package.preload["scripts/settings/projectile_locomotion/projectile_locomotion_se
     return { valid_interaction_states = { sleep = true, manual_physics = true, engine_physics = true } }
 end
 
+-- The game's own pickup settings are loaded from darktide-source for the chest prediction.
+package.path = "darktide-source/?.lua;" .. package.path
+table.enum = function(...)
+    local t = {}
+
+    for _, k in ipairs({ ... }) do
+        t[k] = k
+    end
+
+    return t
+end
+settings = function(_, t)
+    return t
+end
+
+-- math.next_random: the Numerical Recipes LCG identified in game (types/SOURCES.md).
+local TWO32 = 4294967296
+
+function math.next_random(seed, a, b)
+    local n = (1664525 * (seed % TWO32) + 1013904223) % TWO32
+    local v = n / TWO32
+    local s = n >= 2147483648 and n - TWO32 or n
+
+    if b then
+        return s, a + math.floor(v * (b - a + 1))
+    elseif a then
+        return s, 1 + math.floor(v * a)
+    end
+
+    return s, v
+end
+
+-- table.shuffle, seeded branch (scripts/foundation/utilities/table.lua:781-799).
+table.shuffle = function(source, seed)
+    for ii = #source, 2, -1 do
+        local swap
+
+        seed, swap = math.next_random(seed, ii)
+        source[swap], source[ii] = source[ii], source[swap]
+    end
+
+    return seed
+end
+
+Application = {
+    query_performance_counter = function()
+        return os.clock()
+    end,
+    time_since_query = function(handle)
+        return (os.clock() - handle) * 1000
+    end,
+}
+
 -- Fake HUD ---------------------------------------------------------------------------------------
 
 local TEMPLATE_NAME = "LightweightMarkers_marker"
@@ -264,12 +317,24 @@ end
 
 local interactee_map = {}
 local destructible_map = {}
+-- Set by the chest prediction scenario: the client-side pickup and component systems and floor pickups.
+local prediction_world = nil
 
 Managers = {
     state = {
+        main_path = {
+            path_type = function()
+                return "linear"
+            end,
+        },
         extension = {
+            get_entities = function(_, name)
+                return prediction_world and name == "PickupAnimationExtension" and prediction_world.floor or {}
+            end,
             system = function(_, name)
-                if name == "interactee_system" then
+                if prediction_world and prediction_world[name] then
+                    return prediction_world[name]
+                elseif name == "interactee_system" then
                     return {
                         unit_to_extension_map = function()
                             return interactee_map
@@ -326,9 +391,12 @@ local settings = {
     show_scriptures = false,
     show_heretical_idols = false,
     show_carry_items = false,
+    predict_chest_contents = false,
 }
 
 local hooks = {}
+local LOCALIZATION = dofile(MODS .. "LightweightMarkers/scripts/mods/LightweightMarkers/LightweightMarkers_localization.lua")
+local logged = {}
 
 local mod = {
     get_name = function()
@@ -336,6 +404,15 @@ local mod = {
     end,
     get = function(_, id)
         return settings[id]
+    end,
+    localize = function(_, id)
+        return LOCALIZATION[id] and LOCALIZATION[id].en or "<" .. id .. ">"
+    end,
+    info = function(_, fmt, ...)
+        logged[#logged + 1] = string.format(fmt, ...)
+    end,
+    warning = function(_, fmt, ...)
+        logged[#logged + 1] = "WARNING " .. string.format(fmt, ...)
     end,
     io_dofile = function(_, path)
         return dofile(MODS .. path .. ".lua")
@@ -810,6 +887,200 @@ check(element:marker_for(hidden_pick) == nil, "item picked up while hidden has n
 check(math.abs(element:marker_for(power).widget.style.ring.size[1] - 57.6) < 1e-6, "rebuilt with the new size, got %s", tostring(element:marker_for(power).widget.style.ring.size[1]))
 set_setting("marker_scale", 100)
 frames(2)
+
+-- 13b. Chest prediction against a real online mission (tests/fixtures/hm_cartel_611946183.txt): the
+-- client-side pickup and component systems, the floor pickups and the mission's chests, built from
+-- the dump. Off by default; once on, it starts after the delay, runs over frames and labels the chests
+-- whose contents were confirmed in game.
+do
+    local fixture = MODS .. "LightweightMarkers/tests/fixtures/hm_cartel_611946183.txt"
+    local spawner_map, floor, pool, ratios = {}, {}, {}, {}
+    local chest_by_index = {}
+    local made = {}
+
+    local function make_unit(x, y, z, data)
+        local unit = { pos = { x, y, z, x = x, y = y, z = z }, data = data or {}, extensions = {} }
+
+        ALIVE[unit] = true
+        made[#made + 1] = unit
+
+        return unit
+    end
+
+    for line in io.lines(fixture) do
+        local kind = line:sub(1, 2)
+
+        if kind == "S|" then
+            local li, pct, chest, x, y, z, comps = line:match("^S|([^|]*)|([^|]*)|([^|]*)|([^,]*),([^,]*),([^|]*)|(.*)$")
+            local unit = make_unit(tonumber(x), tonumber(y), tonumber(z))
+            local components = {}
+
+            for c in comps:gmatch("[^;]+") do
+                local dtype, items = c:match("^([^:]*):(.*)$")
+                local spawnable = "all"
+
+                if items ~= "all" then
+                    spawnable = {}
+
+                    for name in items:gmatch("[^+]+") do
+                        spawnable[#spawnable + 1] = name
+                    end
+                end
+
+                components[#components + 1] = { distribution_type = dtype, spawnable_pickups = spawnable }
+            end
+
+            local is_chest = chest == "1"
+            local percentage = tonumber(pct)
+
+            spawner_map[unit] = {
+                _components = components,
+                percentage_through_level = function()
+                    return percentage
+                end,
+                is_chest = function()
+                    return is_chest
+                end,
+            }
+
+            if is_chest then
+                chest_by_index[li] = unit
+            end
+        elseif kind == "P|" then
+            local name, x, y, z = line:match("^P|([^|]*)|([^,]*),([^,]*),(.*)$")
+
+            floor[make_unit(tonumber(x), tonumber(y), tonumber(z), { pickup_type = name })] = true
+        elseif kind == "Q|" then
+            local dtype, category, name, count = line:match("^Q|([^|]*)|([^|]*)|([^|]*)|(.*)$")
+
+            pool[dtype] = pool[dtype] or {}
+            pool[dtype][category] = pool[dtype][category] or {}
+            pool[dtype][category][name] = tonumber(count)
+        elseif kind == "R|" then
+            local dtype, ratio = line:match("^R|([^|]*)|(.*)$")
+
+            ratios[dtype] = tonumber(ratio)
+        end
+    end
+
+    prediction_world = {
+        floor = floor,
+        pickup_system = {
+            _min_chest_spawner_ratios = ratios,
+            unit_to_extension_map = function()
+                return spawner_map
+            end,
+            _fetch_settings = function()
+                return pool
+            end,
+        },
+        component_system = {
+            get_level_seed = function()
+                return 611946183
+            end,
+        },
+    }
+
+    -- The mod discovers the chests the way the game announces them (interactee hook).
+    for _, unit in pairs(chest_by_index) do
+        local interactee = setmetatable({ _unit = unit, _interactions = { chest = true }, icon = ICONS .. "default" }, { __index = interactee_class })
+
+        unit.extensions.interactee_system = interactee
+        unit.extensions.chest_system = { is_open = function()
+            return false
+        end }
+        interactee_map[unit] = interactee
+        hooks["InteracteeExtension.set_interaction_context"](interactee, "chest", {}, true)
+    end
+
+    local grenade_chest = chest_by_index["266"]
+    local diamantine_chest = chest_by_index["295"]
+    local empty_chest = chest_by_index["320"]
+
+    hud.elements.HudElementWorldMarkers.camera.pos = { grenade_chest.pos[1], grenade_chest.pos[2], grenade_chest.pos[3] }
+    frames(12)
+    check(element:marker_for(grenade_chest) ~= nil, "chests near the camera are marked")
+    check(element:marker_for(grenade_chest).widget.content.contents == nil, "no contents while the option is off")
+
+    local logged_before = #logged
+
+    set_setting("predict_chest_contents", true)
+    frames(4)
+    check(#logged == logged_before, "nothing computed before the delay")
+    frames(40)
+
+    local summary = logged[#logged] or ""
+
+    check(summary:find("chest prediction: 12 chests, 65 floor pickups confirmed", 1, true) ~= nil, "prediction confirmed, got %q", summary)
+
+    local labelled = element:marker_for(grenade_chest)
+
+    check(labelled and labelled.widget.content.contents == "Grenades", "chest 266 shows Grenades, got %s",
+        tostring(labelled and labelled.widget.content.contents))
+
+    hud.elements.HudElementWorldMarkers.camera.pos = { diamantine_chest.pos[1], diamantine_chest.pos[2], diamantine_chest.pos[3] }
+    frames(2)
+
+    local diamantine = element:marker_for(diamantine_chest)
+
+    check(diamantine and diamantine.widget.content.contents == "Diamantine", "chest 295 shows Diamantine, got %s",
+        tostring(diamantine and diamantine.widget.content.contents))
+
+    hud.elements.HudElementWorldMarkers.camera.pos = { empty_chest.pos[1], empty_chest.pos[2], empty_chest.pos[3] }
+    frames(2)
+    check(element:marker_for(empty_chest) and element:marker_for(empty_chest).widget.content.contents == nil,
+        "a chest without a reservation shows no contents")
+
+    -- Close up, vanilla's marker takes over the ring and icon, but the contents stay above its ring.
+    hud.elements.HudElementWorldMarkers.camera.pos = { grenade_chest.pos[1], grenade_chest.pos[2], grenade_chest.pos[3] }
+    frames(2)
+
+    local close = element:marker_for(grenade_chest)
+    local vanilla_chest = {
+        id = 8888,
+        draw = true,
+        widget = { alpha_multiplier = 1, visible = true, style = { ring = { size = { 96, 96 } } } },
+        template = {},
+        distance = 3,
+    }
+
+    element._markers_by_id[8888] = vanilla_chest
+    hud.elements.HudElementInteraction = { _interaction_units = { [grenade_chest] = { marker_id = 8888 } } }
+    frames(2)
+    check(close.draw == true, "a chest with predicted contents stays drawn under vanilla's marker")
+    check(close.widget.style.ring.color[1] == 0 and close.widget.style.icon.color[1] == 0, "its ring and icon give way to vanilla's")
+    check(close.widget.style.contents.offset[2] == -(96 * 0.5 + 16), "contents sit above vanilla's ring, got %s",
+        tostring(close.widget.style.contents.offset[2]))
+    element._markers_by_id[8888] = nil
+    hud.elements.HudElementInteraction = nil
+    frames(2)
+    check(close.widget.style.ring.color[1] == 255, "ring back once vanilla's marker is gone")
+
+    -- Turning the option off clears the prediction; the rebuilt markers have no contents.
+    set_setting("predict_chest_contents", false)
+    frames(2)
+    check(element:marker_for(grenade_chest).widget.content.contents == nil, "contents gone with the option off")
+
+    -- A mission without enough floor pickups to confirm shows nothing and says why.
+    for unit in pairs(floor) do
+        floor[unit] = nil
+    end
+
+    set_setting("predict_chest_contents", true)
+    frames(60)
+    check((logged[#logged] or ""):find("chest prediction: nothing shown", 1, true) ~= nil, "unconfirmed prediction shows nothing, got %q", logged[#logged] or "")
+    check(element:marker_for(grenade_chest).widget.content.contents == nil, "no contents without a confirmed prediction")
+    set_setting("predict_chest_contents", false)
+
+    for _, unit in ipairs(made) do
+        ALIVE[unit] = nil
+        interactee_map[unit] = nil
+    end
+
+    prediction_world = nil
+    camera_at(0)
+    frames(2)
+end
 
 -- 14. Mission exit clears everything.
 mod.on_game_state_changed("exit", "StateGameplay")
