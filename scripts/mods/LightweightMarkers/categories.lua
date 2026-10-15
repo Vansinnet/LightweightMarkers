@@ -49,6 +49,7 @@ local kinds = {
     ammo_crate_deployed = kind("ammo", "pocketable_ammo"),
     grenade = kind("grenades", "grenade"),
     medical_crate = kind("medical", "pocketable_medkit"),
+    medical_crate_deployed = kind("medical", "pocketable_medkit"),
     stimm_medical = kind("stimms", "pocketable_syringe_corruption", MEDICAL_GREEN),
     stimm_power = kind("stimms", "pocketable_syringe_power", POWER_RED),
     stimm_speed = kind("stimms", "pocketable_syringe_speed", SPEED_BLUE),
@@ -75,12 +76,12 @@ local kinds = {
 kinds.health_station.frame = "point_of_interest"
 kinds.heretical_idol.frame = "idol"
 
--- Remaining charges as a number: a health station's synced charge amount, a deployed ammo crate's
--- pickup charges (4 when deployed). The crate is tagged when deployed, which keeps vanilla's marker
--- on it, so its count stays while vanilla's marker shows it.
+-- What is left, shown right above the marker at every distance (also while vanilla's marker shows
+-- the item): a health station's synced charge amount, a deployed ammo crate's pickup charges (4 when
+-- deployed), and a deployed medical crate's estimated healing left in percent.
 kinds.health_station.charges = "health_station"
 kinds.ammo_crate_deployed.charges = "pickup"
-kinds.ammo_crate_deployed.keep_count = true
+kinds.medical_crate_deployed.charges = "medkit"
 -- An icon that replaces vanilla's, on our marker and on vanilla's, once its package is loaded
 -- (LightweightMarkers.lua, ICON_PACKAGE): the loadout-preset ammo icon, as in Markers Improved AIO.
 kinds.ammo_large.own_icon = "content/ui/materials/icons/presets/preset_16"
@@ -125,7 +126,7 @@ local by_pickup = {
 local by_interaction = {
     chest = kinds.chest,
     health_station = kinds.health_station,
-    deployable_marker = kinds.medical_crate,
+    deployable_marker = kinds.medical_crate_deployed,
 }
 
 -- Group -> setting id of its on/off checkbox.

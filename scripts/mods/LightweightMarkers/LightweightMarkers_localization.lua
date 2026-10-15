@@ -19,7 +19,9 @@ return {
     show_grenades = { en = "Grenades" },
     show_grenades_tooltip = { en = "Grenade refills." },
     show_medical = { en = "Medical crates" },
-    show_medical_tooltip = { en = "Medical crates, carried and deployed." },
+    show_medical_tooltip = {
+        en = "Medical crates, carried and deployed. A deployed crate shows an estimate of the healing it has left; the game does not send the exact amount, so healing spent before you saw the crate is missed.",
+    },
     show_stimms = { en = "Stimms" },
     show_stimms_tooltip = { en = "Medical, power, speed and concentration stimms." },
     show_health_stations = { en = "Health stations" },

@@ -13,6 +13,8 @@ local function load(name)
 end
 
 local Categories = load("categories")
+local MedicalCrateSettings = require("scripts/settings/deployables/templates/medical_crate")
+local PlayerUnitStatus = require("scripts/utilities/attack/player_unit_status")
 
 -- Named after the ModID so a renamed copy of the mod never shares (and removes) this template.
 local TEMPLATE_NAME = mod:get_name() .. "_marker"
@@ -29,7 +31,14 @@ local EMPTY_STATION_ALPHA = 0.45
 local ICON_PACKAGE = "packages/ui/view_elements/view_element_profile_presets/view_element_profile_presets"
 
 local CHARGE_COLORS = Categories.charge_colors
+local MEDKIT = MedicalCrateSettings.proximity_init_data
+local MEDKIT_RADIUS_SQ = MedicalCrateSettings.proximity_check_params.proximity_radius ^ 2
 local COUNT_TEXT = {}
+local PERCENT_TEXT = {}
+
+for percent = 0, 100 do
+    PERCENT_TEXT[percent] = percent .. " %"
+end
 
 for charges = 0, 9 do
     COUNT_TEXT[charges] = tostring(charges)
@@ -114,6 +123,10 @@ local function clear_registry()
     table.clear(index_of)
     count = 0
 end
+
+-- Deployed medical crates seen this mission: healing spent so far and each player's last health and
+-- knock-down state. Kept across a registry reseed (settings change), cleared on mission exit.
+local medkits = setmetatable({}, { __mode = "k" })
 
 -- Vanilla's interaction marker sets its icon colour only when its visual type changes, for example
 -- on tagging (world_marker_template_interaction.lua, setup_marker_by_interaction_type). After each of
@@ -333,7 +346,12 @@ end
 -- the server lowers on each use (pickup_interaction.lua, _use_charge); the unit spawner drops the
 -- unit's id when that object is destroyed (unit_spawner_manager.lua, destroy_game_object_unit).
 local function charge_amount(unit, source)
-    if source == "health_station" then
+    if source == "medkit" then
+        local medkit = medkits[unit]
+        local left = 1 - (medkit and medkit.healed or 0) / MEDKIT.optional_heal_reserve
+
+        return math.max(math.ceil(left * 100), 0)
+    elseif source == "health_station" then
         local station = ScriptUnit.has_extension(unit, "health_station_system")
 
         return station and station:charge_amount()
@@ -353,16 +371,62 @@ local function refresh_charges(unit, marker, source)
 
     if charges ~= marker.lsm_charges then
         local widget = marker.widget
-        local color = charges and CHARGE_COLORS[charges]
+        local percent = source == "medkit"
+        local color = charges and CHARGE_COLORS[percent and math.ceil(charges / 25) or charges]
 
         marker.lsm_charges = charges
-        widget.content.count = charges and (COUNT_TEXT[charges] or tostring(charges)) or nil
+        widget.content.count = charges and (percent and PERCENT_TEXT[charges] or COUNT_TEXT[charges] or tostring(charges)) or nil
         marker.lsm_dim = charges == 0 and EMPTY_STATION_ALPHA or 1
 
         if color then
             local text_color = widget.style.count.text_color
 
             text_color[1], text_color[2], text_color[3], text_color[4] = color[1], color[2], color[3], color[4]
+        end
+    end
+end
+
+-- A deployed medical crate's pool is server-only (ProximityHeal._amount_of_damage_healed). The server
+-- spends it as the health it gives players within its radius, at a lower cost while one is knocked
+-- down (proximity_heal.lua, update), so the health those players gain estimates it. A knock-down or a
+-- revive resets health, so only a gain in an unchanged state counts. It misses what was spent before
+-- this client saw the crate and counts other healing inside the radius.
+local function sample_medkit(unit)
+    local medkit = medkits[unit]
+
+    if not medkit then
+        medkit = { healed = 0, health = setmetatable({}, { __mode = "k" }), downed = setmetatable({}, { __mode = "k" }) }
+        medkits[unit] = medkit
+    end
+
+    local spawn_manager = Managers.state.player_unit_spawn
+    local players = spawn_manager and spawn_manager:alive_players()
+
+    if not players then
+        return
+    end
+
+    local position = Unit.world_position(unit, 1)
+
+    for _, player in pairs(players) do
+        local player_unit = player.player_unit
+        local health_extension = player_unit and ScriptUnit.has_extension(player_unit, "health_system")
+        local unit_data = player_unit and ScriptUnit.has_extension(player_unit, "unit_data_system")
+
+        if health_extension and unit_data then
+            local health = health_extension:current_health()
+            local downed = PlayerUnitStatus.is_knocked_down(unit_data:read_component("character_state"))
+            local last = medkit.health[player_unit]
+
+            if last and health > last and downed == medkit.downed[player_unit]
+                and Vector3.distance_squared(Unit.world_position(player_unit, 1), position) <= MEDKIT_RADIUS_SQ then
+                local cost = downed and MEDKIT.knock_down_player_heal_cost_multiplier or 1
+
+                medkit.healed = medkit.healed + (health - last) * cost
+            end
+
+            medkit.health[player_unit] = health
+            medkit.downed[player_unit] = downed
         end
     end
 end
@@ -433,6 +497,11 @@ local function sweep()
             local marker = marker_by_unit[unit]
             local wanted = group_enabled[kind.group]
             local finished = false
+
+            -- Sampled at any distance, so healing out of marker range still counts.
+            if kind.charges == "medkit" then
+                sample_medkit(unit)
+            end
 
             if wanted and kind.chest then
                 local chest = ScriptUnit.has_extension(unit, "chest_system")
@@ -667,6 +736,7 @@ mod.on_disabled = function()
     release_icon_package()
     unregister()
     clear_registry()
+    table.clear(medkits)
 end
 
 mod.on_unload = function(exit_game)
@@ -682,6 +752,7 @@ mod.on_unload = function(exit_game)
     release_icon_package()
     unregister()
     clear_registry()
+    table.clear(medkits)
 end
 
 mod.on_setting_changed = function()
@@ -701,5 +772,6 @@ mod.on_game_state_changed = function(status, state_name)
     if status == "exit" and state_name == "StateGameplay" then
         remove_all_markers()
         clear_registry()
+        table.clear(medkits)
     end
 end

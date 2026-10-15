@@ -90,6 +90,22 @@ package.preload["scripts/managers/ui/ui_widget"] = function()
 end
 
 -- table.enum states are their own names (scripts/settings/projectile_locomotion/projectile_locomotion_settings.lua).
+-- The game's medical crate values (scripts/settings/deployables/templates/medical_crate.lua).
+package.preload["scripts/settings/deployables/templates/medical_crate"] = function()
+    return {
+        proximity_check_params = { proximity_radius = 3 },
+        proximity_init_data = { knock_down_player_heal_cost_multiplier = 0.3, optional_heal_reserve = 500 },
+    }
+end
+
+package.preload["scripts/utilities/attack/player_unit_status"] = function()
+    return {
+        is_knocked_down = function(character_state)
+            return character_state.knocked_down == true
+        end,
+    }
+end
+
 package.preload["scripts/settings/projectile_locomotion/projectile_locomotion_settings"] = function()
     return { valid_interaction_states = { sleep = true, manual_physics = true, engine_physics = true } }
 end
@@ -740,7 +756,7 @@ check(deployed_marker.draw == true, "deployed crate's count stays under vanilla'
 check(deployed_marker.widget.style.ring.color[1] == 0 and deployed_marker.widget.style.icon.color[1] == 0, "its ring and icon give way to vanilla's")
 check(deployed_marker.widget.style.count.offset[1] == 0 and deployed_marker.widget.style.count.offset[2] == -(96 * 0.5 + 14), "count sits above vanilla's ring, got %s", tostring(deployed_marker.widget.style.count.offset[2]))
 check(element:marker_for(carried).draw == false, "carried crate yields as usual")
-check(element:marker_for(station) == nil or element:marker_for(station).lsm_keep_count == false, "health stations do not keep their count")
+check(element:marker_for(station).lsm_keep_count == true, "health stations keep their count too")
 deployed.game_object_id = nil
 frames(1)
 check(deployed_marker.widget.content.count == nil and deployed_marker.draw == false, "no count once its game object is gone; yields")
@@ -751,6 +767,72 @@ despawn(deployed)
 despawn(carried)
 frames(2)
 check(element:marker_for(deployed) == nil, "used-up crate has no marker")
+
+-- 8c. Deployed medical crate: healing left estimated from the health players in its radius gain.
+local players = {}
+
+Managers.state.player_unit_spawn = {
+    alive_players = function()
+        return players
+    end,
+}
+
+local function new_player(x, health)
+    local character_state = { knocked_down = false }
+    local player_unit = new_unit(x, {}, {
+        health_system = { current_health = function(self)
+            return self.health
+        end, health = health },
+        unit_data_system = { read_component = function(_, name)
+            return name == "character_state" and character_state or nil
+        end },
+    })
+
+    players[#players + 1] = { player_unit = player_unit }
+
+    return player_unit.extensions.health_system, character_state
+end
+
+local near_health, near_state = new_player(15, 100)
+local far_health = new_player(30, 100)
+local crate_marker = element:marker_for(crate)
+local crate_text = crate_marker.widget.content
+local crate_color = crate_marker.widget.style.count.text_color
+
+frames(1)
+check(crate_text.count == "100 %", "fresh medical crate shows 100 %%, got %s", tostring(crate_text.count))
+check(crate_marker.lsm_keep_count == true, "medical crate keeps its percentage under vanilla's marker")
+near_health.health = 150
+far_health.health = 400
+frames(1)
+check(crate_text.count == "90 %", "50 healed in the radius is 10 %%, got %s", tostring(crate_text.count))
+check(crate_color[2] == 30 and crate_color[3] == 255, "90 %% is green")
+near_health.health = 350
+frames(1)
+check(crate_text.count == "50 %" and crate_color[2] == 255 and crate_color[3] == 150, "50 %% is orange, got %s", tostring(crate_text.count))
+near_state.knocked_down = true
+near_health.health = 1000
+frames(1)
+check(crate_text.count == "50 %", "a knock-down's health reset does not count")
+near_health.health = 1100
+frames(1)
+check(crate_text.count == "44 %", "healing while knocked down costs 0.3, got %s", tostring(crate_text.count))
+near_state.knocked_down = false
+near_health.health = 2000
+frames(1)
+check(crate_text.count == "44 %", "a revive's health reset does not count")
+camera_at(-100)
+near_health.health = 2100
+frames(1)
+check(element:marker_for(crate) == nil, "no marker out of range")
+camera_at(0)
+frames(1)
+check(element:marker_for(crate).widget.content.count == "24 %", "healing out of range still counts, got %s", tostring(element:marker_for(crate).widget.content.count))
+for _, player in ipairs(players) do
+    ALIVE[player.player_unit] = nil
+end
+players = {}
+Managers.state.player_unit_spawn = nil
 
 -- 9. Category toggle.
 set_setting("show_stimms", false)

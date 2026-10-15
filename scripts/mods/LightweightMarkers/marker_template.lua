@@ -170,7 +170,7 @@ return function(ctx)
                     vertical_alignment = "center",
                     text_horizontal_alignment = "center",
                     text_vertical_alignment = "center",
-                    size = { 40, 24 },
+                    size = { 64, 24 },
                     offset = { 0, -RING_SIZE * 0.5 - COUNT_LIFT, 4 },
                     text_color = { 255, 255, 255, 255 },
                 },
@@ -242,7 +242,7 @@ return function(ctx)
         count.font_size = COUNT_FONT_SIZE * config.marker_scale
         count.offset[2] = -(ring_size * 0.5 + count_lift)
         marker.lsm_count_lift = count_lift
-        marker.lsm_keep_count = kind.keep_count == true
+        marker.lsm_keep_count = kind.charges ~= nil
 
         content.icon = marker.data.icon
         content.label = nil
