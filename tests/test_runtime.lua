@@ -94,7 +94,20 @@ end
 package.preload["scripts/settings/deployables/templates/medical_crate"] = function()
     return {
         proximity_check_params = { proximity_radius = 3 },
-        proximity_init_data = { knock_down_player_heal_cost_multiplier = 0.3, optional_heal_reserve = 500 },
+        proximity_init_data = {
+            heal_rate_percentage = 0.06,
+            knock_down_player_heal_cost_multiplier = 0.3,
+            knock_down_player_heal_speed_multiplier = 0.1,
+            optional_heal_reserve = 500,
+        },
+    }
+end
+
+-- table.enum keywords are their own names (scripts/settings/buff/buff_settings.lua).
+package.preload["scripts/settings/buff/buff_settings"] = function()
+    return {
+        keywords = { improved_medical_crate = "improved_medical_crate", improved_ammo_pickups = "improved_ammo_pickups" },
+        keyword_settings = { improved_medical_crate = { heal_multiplier = 2 } },
     }
 end
 
@@ -768,71 +781,121 @@ despawn(carried)
 frames(2)
 check(element:marker_for(deployed) == nil, "used-up crate has no marker")
 
--- 8c. Deployed medical crate: healing left estimated from the health players in its radius gain.
+-- 8c. Deployed medical crate: the server's spending replayed for players in its radius, at any
+-- distance, also while health stays flat because damage (grimoire corruption) eats the healing.
 local players = {}
+local game_t = 0
 
 Managers.state.player_unit_spawn = {
     alive_players = function()
         return players
     end,
 }
+Managers.time = {
+    has_timer = function(_, name)
+        return name == "gameplay"
+    end,
+    time = function()
+        return game_t
+    end,
+}
 
-local function new_player(x, health)
+local function new_player(x, keyword)
     local character_state = { knocked_down = false }
+    local health = { max = 200, damage = 0, permanent = 0 }
     local player_unit = new_unit(x, {}, {
-        health_system = { current_health = function(self)
-            return self.health
-        end, health = health },
+        health_system = {
+            max_health = function()
+                return health.max
+            end,
+            damage_taken = function()
+                return health.damage
+            end,
+            permanent_damage_taken = function()
+                return health.permanent
+            end,
+        },
         unit_data_system = { read_component = function(_, name)
             return name == "character_state" and character_state or nil
+        end },
+        buff_system = { has_keyword = function(_, name)
+            return name == keyword
         end },
     })
 
     players[#players + 1] = { player_unit = player_unit }
 
-    return player_unit.extensions.health_system, character_state
+    return health, character_state
 end
 
-local near_health, near_state = new_player(15, 100)
-local far_health = new_player(30, 100)
+-- Each step is one sweep: 0.25 s of gameplay time, 3 health at 200 max health and 6 %/s.
+local function steps(n)
+    for _ = 1, n do
+        game_t = game_t + 0.25
+        frame(0.25)
+    end
+end
+
+local near, near_state = new_player(15)
+local far = new_player(30)
 local crate_marker = element:marker_for(crate)
 local crate_text = crate_marker.widget.content
 local crate_color = crate_marker.widget.style.count.text_color
 
-frames(1)
+steps(1)
 check(crate_text.count == "100 %", "fresh medical crate shows 100 %%, got %s", tostring(crate_text.count))
 check(crate_marker.lsm_keep_count == true, "medical crate keeps its percentage under vanilla's marker")
-near_health.health = 150
-far_health.health = 400
-frames(1)
-check(crate_text.count == "90 %", "50 healed in the radius is 10 %%, got %s", tostring(crate_text.count))
-check(crate_color[2] == 30 and crate_color[3] == 255, "90 %% is green")
-near_health.health = 350
-frames(1)
-check(crate_text.count == "50 %" and crate_color[2] == 255 and crate_color[3] == 150, "50 %% is orange, got %s", tostring(crate_text.count))
+near.damage = 100
+far.damage = 100
+steps(10)
+check(crate_text.count == "94 %", "10 sweeps of 3 healed is 6 %%, the far player not counted, got %s", tostring(crate_text.count))
+check(crate_color[2] == 30 and crate_color[3] == 255, "94 %% is green")
+-- Grimoire corruption: health stays flat, but damage above the corruption floor is still healed.
+near.permanent = 50
+steps(10)
+check(crate_text.count == "88 %", "healing hidden by corruption still counts, got %s", tostring(crate_text.count))
+near.permanent = 100
+steps(10)
+check(crate_text.count == "88 %", "nothing is healed below the corruption floor")
+near.permanent = 0
+steps(60)
+check(crate_text.count == "52 %" and crate_color[2] == 255 and crate_color[3] == 255, "52 %% is yellow, got %s", tostring(crate_text.count))
 near_state.knocked_down = true
-near_health.health = 1000
-frames(1)
-check(crate_text.count == "50 %", "a knock-down's health reset does not count")
-near_health.health = 1100
-frames(1)
-check(crate_text.count == "44 %", "healing while knocked down costs 0.3, got %s", tostring(crate_text.count))
+near.max = 100
+steps(4)
+check(crate_text.count == "52 %", "knocked down heals a tenth as fast at 0.3 of the cost, got %s", tostring(crate_text.count))
 near_state.knocked_down = false
-near_health.health = 2000
-frames(1)
-check(crate_text.count == "44 %", "a revive's health reset does not count")
+near.max = 200
+hud._currently_visible_elements.HudElementWorldMarkers = false
+steps(20)
+hud._currently_visible_elements.HudElementWorldMarkers = true
 camera_at(-100)
-near_health.health = 2100
-frames(1)
+steps(20)
 check(element:marker_for(crate) == nil, "no marker out of range")
 camera_at(0)
-frames(1)
-check(element:marker_for(crate).widget.content.count == "24 %", "healing out of range still counts, got %s", tostring(element:marker_for(crate).widget.content.count))
+steps(1)
+check(element:marker_for(crate).widget.content.count == "28 %", "healing while the HUD is hidden and out of range counts, got %s", tostring(element:marker_for(crate).widget.content.count))
+
+-- A crate deployed while a player has the improved-crate talent heals twice as fast.
+local improved_crate = spawn(40, "deployable_marker", {}, {}, ICONS .. "pocketable_medkit")
+local veteran = new_player(40, "improved_ammo_pickups")
+
+camera_at(40)
+steps(1)
+veteran.damage = 100
+steps(10)
+check(element:marker_for(improved_crate).widget.content.count == "88 %", "improved crate spends twice as fast, got %s", tostring(element:marker_for(improved_crate).widget.content.count))
+despawn(improved_crate)
+camera_at(0)
+
 for _, player in ipairs(players) do
     ALIVE[player.player_unit] = nil
 end
+
 players = {}
 Managers.state.player_unit_spawn = nil
+Managers.time = nil
+frames(1)
 
 -- 9. Category toggle.
 set_setting("show_stimms", false)

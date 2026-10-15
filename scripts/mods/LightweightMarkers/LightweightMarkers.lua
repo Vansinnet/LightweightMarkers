@@ -13,6 +13,7 @@ local function load(name)
 end
 
 local Categories = load("categories")
+local BuffSettings = require("scripts/settings/buff/buff_settings")
 local MedicalCrateSettings = require("scripts/settings/deployables/templates/medical_crate")
 local PlayerUnitStatus = require("scripts/utilities/attack/player_unit_status")
 
@@ -33,6 +34,11 @@ local ICON_PACKAGE = "packages/ui/view_elements/view_element_profile_presets/vie
 local CHARGE_COLORS = Categories.charge_colors
 local MEDKIT = MedicalCrateSettings.proximity_init_data
 local MEDKIT_RADIUS_SQ = MedicalCrateSettings.proximity_check_params.proximity_radius ^ 2
+local IMPROVED_MEDKIT = BuffSettings.keywords.improved_medical_crate
+-- improved_medical_crate is not network-synced; improved_ammo_pickups from the same veteran talent is
+-- (buff_settings.lua, network_synced_keywords; veteran_buff_templates.lua, veteran_better_deployables).
+local IMPROVED_AMMO = BuffSettings.keywords.improved_ammo_pickups
+local IMPROVED_MEDKIT_HEAL = BuffSettings.keyword_settings[IMPROVED_MEDKIT].heal_multiplier
 local COUNT_TEXT = {}
 local PERCENT_TEXT = {}
 
@@ -87,9 +93,17 @@ local count = 0
 
 -- Only items whose group is on are tracked, so turned-off groups (most collectibles by default)
 -- cost nothing; turning one on reseeds the registry.
+-- Deployed medical crates seen this mission: healing spent so far, the time of the last sample and
+-- the heal modifier. Kept across a registry reseed (settings change), cleared on mission exit.
+local medkits = {}
+
 local function track(unit, kind)
     if index_of[unit] or not config.group_enabled[kind.group] then
         return
+    end
+
+    if kind.charges == "medkit" and not medkits[unit] then
+        medkits[unit] = { healed = 0 }
     end
 
     count = count + 1
@@ -124,9 +138,7 @@ local function clear_registry()
     count = 0
 end
 
--- Deployed medical crates seen this mission: healing spent so far and each player's last health and
--- knock-down state. Kept across a registry reseed (settings change), cleared on mission exit.
-local medkits = setmetatable({}, { __mode = "k" })
+
 
 -- Vanilla's interaction marker sets its icon colour only when its visual type changes, for example
 -- on tagging (world_marker_template_interaction.lua, setup_marker_by_interaction_type). After each of
@@ -348,9 +360,9 @@ end
 local function charge_amount(unit, source)
     if source == "medkit" then
         local medkit = medkits[unit]
-        local left = 1 - (medkit and medkit.healed or 0) / MEDKIT.optional_heal_reserve
+        local reserve = MEDKIT.optional_heal_reserve
 
-        return math.max(math.ceil(left * 100), 0)
+        return math.max(math.ceil((reserve - (medkit and medkit.healed or 0)) * 100 / reserve), 0)
     elseif source == "health_station" then
         local station = ScriptUnit.has_extension(unit, "health_station_system")
 
@@ -386,47 +398,66 @@ local function refresh_charges(unit, marker, source)
     end
 end
 
--- A deployed medical crate's pool is server-only (ProximityHeal._amount_of_damage_healed). The server
--- spends it as the health it gives players within its radius, at a lower cost while one is knocked
--- down (proximity_heal.lua, update), so the health those players gain estimates it. A knock-down or a
--- revive resets health, so only a gain in an unchanged state counts. It misses what was spent before
--- this client saw the crate and counts other healing inside the radius.
-local function sample_medkit(unit)
-    local medkit = medkits[unit]
+-- A deployed medical crate's pool is server-only (ProximityHeal._amount_of_damage_healed), so its
+-- spending is replayed (proximity_heal.lua, update): every player within the radius whose damage is
+-- above the corruption floor (add_heal never heals below permanent damage) is healed max health x
+-- heal rate x time, doubled when a player had the improved-crate talent as the crate started, a tenth
+-- as fast and at 0.3 of the cost while knocked down, up to what is healable. Replaying the formula,
+-- not watching health, keeps counting while damage such as grimoire corruption eats the healing.
+-- Misses what was spent before this client saw the crate and buffs to healing received.
+local function improved_medkit(players)
+    for _, player in pairs(players) do
+        local player_unit = player.player_unit
+        local buff_extension = player_unit and ScriptUnit.has_extension(player_unit, "buff_system")
 
-    if not medkit then
-        medkit = { healed = 0, health = setmetatable({}, { __mode = "k" }), downed = setmetatable({}, { __mode = "k" }) }
-        medkits[unit] = medkit
+        if buff_extension and (buff_extension:has_keyword(IMPROVED_MEDKIT) or buff_extension:has_keyword(IMPROVED_AMMO)) then
+            return true
+        end
     end
 
+    return false
+end
+
+local function sample_medkits(ALIVE)
     local spawn_manager = Managers.state.player_unit_spawn
     local players = spawn_manager and spawn_manager:alive_players()
+    local time_manager = Managers.time
+    local t = time_manager and time_manager:has_timer("gameplay") and time_manager:time("gameplay")
 
-    if not players then
+    if not players or not t then
         return
     end
 
-    local position = Unit.world_position(unit, 1)
+    for unit, medkit in pairs(medkits) do
+        local last_t = medkit.t
 
-    for _, player in pairs(players) do
-        local player_unit = player.player_unit
-        local health_extension = player_unit and ScriptUnit.has_extension(player_unit, "health_system")
-        local unit_data = player_unit and ScriptUnit.has_extension(player_unit, "unit_data_system")
+        medkit.t = t
 
-        if health_extension and unit_data then
-            local health = health_extension:current_health()
-            local downed = PlayerUnitStatus.is_knocked_down(unit_data:read_component("character_state"))
-            local last = medkit.health[player_unit]
+        if not ALIVE[unit] then
+            medkits[unit] = nil
+        elseif not last_t then
+            -- The server checks the talent once, when the crate starts (ProximityHeal.init).
+            medkit.modifier = improved_medkit(players) and IMPROVED_MEDKIT_HEAL or 1
+        else
+            local dt = t - last_t
+            local position = Unit.world_position(unit, 1)
 
-            if last and health > last and downed == medkit.downed[player_unit]
-                and Vector3.distance_squared(Unit.world_position(player_unit, 1), position) <= MEDKIT_RADIUS_SQ then
-                local cost = downed and MEDKIT.knock_down_player_heal_cost_multiplier or 1
+            for _, player in pairs(players) do
+                local player_unit = player.player_unit
+                local health_extension = player_unit and ScriptUnit.has_extension(player_unit, "health_system")
+                local unit_data = player_unit and ScriptUnit.has_extension(player_unit, "unit_data_system")
+                local healable = health_extension and health_extension:damage_taken() - health_extension:permanent_damage_taken()
 
-                medkit.healed = medkit.healed + (health - last) * cost
+                if unit_data and healable > 0
+                    and Vector3.distance_squared(Unit.world_position(player_unit, 1), position) <= MEDKIT_RADIUS_SQ then
+                    local downed = PlayerUnitStatus.is_knocked_down(unit_data:read_component("character_state"))
+                    local speed = downed and MEDKIT.knock_down_player_heal_speed_multiplier or 1
+                    local cost = downed and MEDKIT.knock_down_player_heal_cost_multiplier or 1
+                    local heal = health_extension:max_health() * MEDKIT.heal_rate_percentage * dt * medkit.modifier * speed
+
+                    medkit.healed = medkit.healed + math.min(healable, heal) * cost
+                end
             end
-
-            medkit.health[player_unit] = health
-            medkit.downed[player_unit] = downed
         end
     end
 end
@@ -463,6 +494,9 @@ local function sweep()
         return
     end
 
+    -- At any distance and while the HUD is hidden, so no healing is missed.
+    sample_medkits(ALIVE)
+
     local element = state.element
     local camera = element and element:_get_camera()
 
@@ -497,11 +531,6 @@ local function sweep()
             local marker = marker_by_unit[unit]
             local wanted = group_enabled[kind.group]
             local finished = false
-
-            -- Sampled at any distance, so healing out of marker range still counts.
-            if kind.charges == "medkit" then
-                sample_medkit(unit)
-            end
 
             if wanted and kind.chest then
                 local chest = ScriptUnit.has_extension(unit, "chest_system")
