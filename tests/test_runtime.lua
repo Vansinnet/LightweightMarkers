@@ -892,6 +892,7 @@ set_setting("show_heretical_idols", true)
 frames(2)
 check(element:marker_for(small_metal) ~= nil, "plasteel shown once turned on")
 check(element:marker_for(tome) ~= nil, "scripture shown once turned on")
+check(element:marker_for(tome).widget.style.icon.color[2] == 190 and element:marker_for(tome).widget.style.icon.color[4] == 255, "scriptures are purple")
 check(element:marker_for(idol) ~= nil, "picked idol shown once turned on")
 check(element:marker_for(hidden_idol) == nil, "idol candidate the game did not pick has no marker")
 local idol_widget = element:marker_for(idol).widget

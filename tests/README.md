@@ -15,4 +15,4 @@ Commands:
 Last results (2026-10-14, Windows bundled LuaJIT, Darktide source 1.13.1):
 
 - `test_categories.lua`: `61 pickups in the game, 24 marked, 37 ignored, 3 interaction types: 0 failures`
-- `test_runtime.lua`: `13756 checks, 0 failures`
+- `test_runtime.lua`: `13759 checks, 0 failures`
