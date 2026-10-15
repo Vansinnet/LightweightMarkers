@@ -548,6 +548,7 @@ local station_marker = element:marker_for(station)
 
 check(station_marker.widget.content.ring == "content/ui/materials/hud/interactions/frames/pickup_top", "station uses vanilla's point-of-interest frame")
 check(math.abs(station_marker.widget.style.ring.size[1] - 57.6) < 1e-6, "station ring matches vanilla's larger frame")
+check(station_marker.widget.style.count.offset[1] == 0 and math.abs(station_marker.widget.style.count.offset[2] + (57.6 * 0.5 + 14)) < 1e-6, "count sits right above the ring")
 
 check(station_marker.widget.content.count == "3", "station shows 3 charges, got %s", tostring(station_marker.widget.content.count))
 
@@ -737,7 +738,7 @@ hud.elements.HudElementInteraction = { _interaction_units = { [deployed] = { mar
 frames(2)
 check(deployed_marker.draw == true, "deployed crate's count stays under vanilla's marker")
 check(deployed_marker.widget.style.ring.color[1] == 0 and deployed_marker.widget.style.icon.color[1] == 0, "its ring and icon give way to vanilla's")
-check(deployed_marker.widget.style.count.offset[1] == 96 * 0.5 + 6, "count sits beside vanilla's ring, got %s", tostring(deployed_marker.widget.style.count.offset[1]))
+check(deployed_marker.widget.style.count.offset[1] == 0 and deployed_marker.widget.style.count.offset[2] == -(96 * 0.5 + 14), "count sits above vanilla's ring, got %s", tostring(deployed_marker.widget.style.count.offset[2]))
 check(element:marker_for(carried).draw == false, "carried crate yields as usual")
 check(element:marker_for(station) == nil or element:marker_for(station).lsm_keep_count == false, "health stations do not keep their count")
 deployed.game_object_id = nil

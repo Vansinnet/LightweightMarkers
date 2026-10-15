@@ -42,8 +42,8 @@ local ICON_SIZE = FRAMES.standard.icon_size
 local LABEL_FONT_SIZE = 15
 local COUNT_FONT_SIZE = 18
 local BACKGROUND_ALPHA = 200
--- Charge counts sit to the upper right of the ring.
-local COUNT_GAP = 6
+-- Charge counts sit right above the ring: from its top to the centre of the count's text box.
+local COUNT_LIFT = 14
 local LINE_OF_SIGHT_SPEED = 8
 local EDGE_FADE = 5
 local MIN_ALPHA = 0.01
@@ -171,7 +171,7 @@ return function(ctx)
                     text_horizontal_alignment = "center",
                     text_vertical_alignment = "center",
                     size = { 40, 24 },
-                    offset = { RING_SIZE * 0.5 + COUNT_GAP, -RING_SIZE * 0.25, 4 },
+                    offset = { 0, -RING_SIZE * 0.5 - COUNT_LIFT, 4 },
                     text_color = { 255, 255, 255, 255 },
                 },
                 visibility_function = function(content)
@@ -237,12 +237,11 @@ return function(ctx)
         label.offset[2] = ring_size * 0.5
 
         local count = style.count
-        local count_gap = COUNT_GAP * config.marker_scale
+        local count_lift = COUNT_LIFT * config.marker_scale
 
         count.font_size = COUNT_FONT_SIZE * config.marker_scale
-        count.offset[1] = ring_size * 0.5 + count_gap
-        count.offset[2] = -ring_size * 0.25
-        marker.lsm_count_gap = count_gap
+        count.offset[2] = -(ring_size * 0.5 + count_lift)
+        marker.lsm_count_lift = count_lift
         marker.lsm_keep_count = kind.keep_count == true
 
         content.icon = marker.data.icon
@@ -352,7 +351,7 @@ return function(ctx)
 
         if keep_count then
             -- The count stays while vanilla's marker takes over: only the ring, its background and
-            -- the icon fade, and the count sits beside the larger of the two rings.
+            -- the icon fade, and the count sits above the larger of the two rings.
             local style = widget.style
             local own = 1 - vanilla
             local top = marker.lsm_ring_size
@@ -367,10 +366,7 @@ return function(ctx)
                 top = math_max(top, vanilla_ring.size[2])
             end
 
-            local offset = style.count.offset
-
-            offset[1] = top * 0.5 + marker.lsm_count_gap
-            offset[2] = -top * 0.25
+            style.count.offset[2] = -(top * 0.5 + marker.lsm_count_lift)
         else
             alpha = alpha * (1 - vanilla)
         end
