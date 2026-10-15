@@ -12,6 +12,7 @@ local SPEED_BLUE = { 255, 30, 150, 255 }
 local CONCENTRATION_YELLOW = { 255, 255, 255, 30 }
 local MATERIAL_LIGHT_BLUE = { 255, 140, 200, 255 }
 local PLASTEEL_LIGHT_ORANGE = { 255, 255, 190, 120 }
+local SIDE_MISSION_PURPLE = { 255, 190, 110, 255 }
 local CHARGES_ORANGE = { 255, 255, 150, 30 }
 
 -- Pickups float 0.8 m above their marker node like vanilla "pickup" interaction markers; chests and
@@ -63,8 +64,8 @@ local kinds = {
     -- prismata cases, and mission containers.
     -- Vanilla's luggable template icon.
     carry_item = kind("carry_items", "default"),
-    grimoire = kind("grimoires", "pocketable_default"),
-    scripture = kind("scriptures", "pocketable_default"),
+    grimoire = kind("grimoires", "pocketable_default", SIDE_MISSION_PURPLE),
+    scripture = kind("scriptures", "pocketable_default", SIDE_MISSION_PURPLE),
     -- Vanilla shows no marker on idols; this is Markers Improved AIO's default idol look: the game's
     -- enemy icon, its colour and frame (heretical_idol_markers_template.lua, markers_aio_data.lua).
     heretical_idol = kind("heretical_idols", "enemy", { 255, 132, 156, 99 }, nil, IDOL_OFFSET),
