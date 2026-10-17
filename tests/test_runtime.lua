@@ -484,6 +484,19 @@ local element = new_hud()
 
 mod.on_enabled(true)
 
+-- 0. Each widget gets its own definition: other mods' _create_widget hooks append passes to the
+-- definition they are given (Markers Improved AIO 2.15.8, ammo_med_markers.lua).
+local our_template = element._marker_templates[TEMPLATE_NAME]
+local first_definition = our_template.create_widget_defintion(our_template, "pivot")
+local pass_count = #first_definition.passes
+
+first_definition.passes[pass_count + 1] = { pass_type = "text", style_id = "other_mod_text" }
+
+local second_definition = our_template.create_widget_defintion(our_template, "pivot")
+
+check(second_definition ~= first_definition, "a fresh definition per widget")
+check(#second_definition.passes == pass_count, "another mod's pass stays on its widget, got %d passes", #second_definition.passes)
+
 -- 1. Discovery and classification.
 local ICONS = "content/ui/materials/hud/interactions/icons/"
 local ammo = spawn(10, "ammunition", { pickup_type = "small_clip" })
