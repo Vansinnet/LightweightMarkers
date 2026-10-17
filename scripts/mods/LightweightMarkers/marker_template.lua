@@ -293,6 +293,16 @@ return function(ctx)
         return alpha, widget
     end
 
+    -- Other mods can rewrite our widget's styles after on_enter (a player's crash: a background
+    -- without a colour), so a pass that lost its colour table keeps its look instead of erroring.
+    local function set_pass_alpha(pass_style, alpha)
+        local color = pass_style and pass_style.color
+
+        if color then
+            color[1] = alpha
+        end
+    end
+
     -- Runs after the HUD decided `draw` for this frame and before drawing
     -- (hud_element_world_markers.lua, _calculate_markers).
     template.update_function = function(element, _, widget, marker, self, dt)
@@ -358,9 +368,9 @@ return function(ctx)
             local vanilla_style = vanilla > 0 and vanilla_widget and vanilla_widget.style
             local vanilla_ring = vanilla_style and vanilla_style.ring
 
-            style.background.color[1] = BACKGROUND_ALPHA * own
-            style.ring.color[1] = 255 * own
-            style.icon.color[1] = marker.lsm_icon_alpha * own
+            set_pass_alpha(style.background, BACKGROUND_ALPHA * own)
+            set_pass_alpha(style.ring, 255 * own)
+            set_pass_alpha(style.icon, marker.lsm_icon_alpha * own)
 
             if vanilla_ring then
                 top = math_max(top, vanilla_ring.size[2])
