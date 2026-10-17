@@ -770,6 +770,18 @@ check(deployed_marker.widget.style.ring.color[1] == 0 and deployed_marker.widget
 check(deployed_marker.widget.style.count.offset[1] == 0 and deployed_marker.widget.style.count.offset[2] == -(96 * 0.5 + 14), "count sits above vanilla's ring, got %s", tostring(deployed_marker.widget.style.count.offset[2]))
 check(element:marker_for(carried).draw == false, "carried crate yields as usual")
 check(element:marker_for(station).lsm_keep_count == true, "health stations keep their count too")
+
+-- Another mod can leave a pass of our widget without its colour (a player's 1.0.3 crash).
+local background_color = deployed_marker.widget.style.background.color
+
+deployed_marker.widget.style.background.color = nil
+deployed_marker.widget.style.icon.color[1] = 255
+
+local ok, err = pcall(frames, 1)
+
+check(ok, "a pass without a colour does not break the count: %s", tostring(err))
+check(deployed_marker.widget.style.icon.color[1] == 0, "the other passes still give way to vanilla's")
+deployed_marker.widget.style.background.color = background_color
 deployed.game_object_id = nil
 frames(1)
 check(deployed_marker.widget.content.count == nil and deployed_marker.draw == false, "no count once its game object is gone; yields")
