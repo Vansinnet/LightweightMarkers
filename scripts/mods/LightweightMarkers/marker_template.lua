@@ -91,11 +91,10 @@ return function(ctx)
         easing_function = math.easeCubic,
     }
 
-    -- One definition for every marker: UIWidget.init clones its content, style and passes
-    -- (scripts/managers/ui/ui_widget.lua).
-    local definitions = {}
-
-    local function create_definition(scenegraph_id)
+    -- A fresh definition per widget, as vanilla's templates build it: other mods' _create_widget
+    -- hooks append passes to the definition they are given (Markers Improved AIO), so a shared one
+    -- would grow with every marker.
+    template.create_widget_defintion = function(_, scenegraph_id)
         return UIWidget.create_definition({
             {
                 pass_type = "texture",
@@ -179,17 +178,6 @@ return function(ctx)
                 end,
             },
         }, scenegraph_id)
-    end
-
-    template.create_widget_defintion = function(_, scenegraph_id)
-        local definition = definitions[scenegraph_id]
-
-        if not definition then
-            definition = create_definition(scenegraph_id)
-            definitions[scenegraph_id] = definition
-        end
-
-        return definition
     end
 
     local function scale_pass(style, base_size, scale)
